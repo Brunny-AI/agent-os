@@ -100,10 +100,12 @@ peek/commit delivery, flock concurrency protection.
 ```bash
 # Send a message
 python3 scripts/bus/send.py \
-    --channel standup --from alice --body "Shipped it."
+    --channel standup --from alice \
+    --body "Shipped it." --bus system/bus
 
 # Read new messages
-python3 scripts/bus/read.py --agent bob --update
+python3 scripts/bus/read.py --agent bob \
+    --bus system/bus --update
 ```
 
 ### Cron Manager (`scripts/cron/`)
