@@ -15,14 +15,17 @@ Key rules:
 
 ### Python
 - 4-space indentation, 80 char line limit
-- Google naming: `lower_with_under` for functions
-  and variables, `CapWords` for classes
-- Type annotations on all public APIs
-  (use `X | None`, no bare `list`/`dict`)
+- Google naming: `lower_with_under` for modules,
+  packages, functions, methods, and variables;
+  `CapWords` for classes; `CAPS_WITH_UNDER` for
+  constants
+- Type annotations on all public APIs (use `X | None`,
+  specify type parameters for generic types)
 - Google-style docstrings with Args/Returns/Raises
 - No bare `except:`, no mutable default arguments
 - Use f-strings for formatting
-- Group imports: stdlib, third-party, local
+- Sort imports lexicographically within groups:
+  stdlib, third-party, local
 - Import packages/modules only, not individual names
 
 ### Shell
@@ -30,6 +33,7 @@ Key rules:
 - Bash only (`#!/usr/bin/env bash`)
 - Quote all variables: `"${var}"` not `$var`
 - Use `local` for variables, `readonly` for constants
+  (`UPPERCASE_WITH_UNDERSCORES`)
 - Errors to STDERR (`>&2`), always check return values
 - Use `"$@"` for passing arguments
 - Scripts over 100 lines should be Python instead
@@ -54,10 +58,7 @@ This is a public repository. Every file is visible to the world.
 
 ```bash
 grep -rnE "your-company|@your-domain" . \
-  --exclude-dir=.git \
-  --include="*.md" \
-  --include="*.py" \
-  --include="*.sh"
+  --exclude-dir=.git
 ```
 
 ## Git Workflow
