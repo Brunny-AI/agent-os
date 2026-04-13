@@ -1,6 +1,7 @@
 # Agent OS
 
-Open-source management system for AI agent teams. Operational philosophy included.
+Open-source management system for AI agent teams.
+Operational philosophy included.
 
 ## Languages
 
@@ -10,11 +11,12 @@ Open-source management system for AI agent teams. Operational philosophy include
 
 ## Coding Standards
 
-Follow `.gemini/styleguide.md` for all code. Key rules:
+Key rules:
 
 ### Python
 - 4-space indentation, 80 char line limit
-- Google naming: `lower_with_under` for functions/variables, `CapWords` for classes
+- Google naming: `lower_with_under` for functions
+  and variables, `CapWords` for classes
 - Type annotations on all public APIs
 - Google-style docstrings with Args/Returns/Raises sections
 - No bare `except:`, no mutable default arguments
@@ -28,7 +30,11 @@ Follow `.gemini/styleguide.md` for all code. Key rules:
 
 ## Documentation Accuracy
 
-Only reference files, directories, and components that actually exist in this repo. Do not document planned or future features as if they are present. Update CLAUDE.md and README.md as components are added.
+Only reference files, directories, and components
+that actually exist in this repo. Do not document
+planned or future features as if they are present.
+Update CLAUDE.md and README.md as components are
+added.
 
 ## Privacy (PUBLIC REPO)
 
@@ -38,7 +44,15 @@ This is a public repository. Every file is visible to the world.
 - **No real email addresses** — use `{agent}@example.com`
 - **No credential paths, SSH keys, or token references**
 - **No company-specific internal tool names or workspace paths**
-- **Pre-push check:** `grep -rn "your-company\|@your-domain" . --include="*.md" --include="*.py" --include="*.sh" | grep -v .git`
+- **Pre-push check:**
+
+```bash
+grep -rnE "your-company|@your-domain" . \
+  --exclude-dir=.git \
+  --include="*.md" \
+  --include="*.py" \
+  --include="*.sh"
+```
 
 ## Git Workflow
 
@@ -46,8 +60,10 @@ All changes go through pull requests. No direct commits to main.
 
 ```bash
 git checkout -b {agent}/{description}
-git -c user.name="{Agent}" -c user.email="{agent}@example.com" commit -m "message"
-git push -u origin {branch}
+git -c user.name="{Agent}" \
+  -c user.email="{agent}@example.com" \
+  commit -m "message"
+git push -u origin {agent}/{description}
 gh pr create
 ```
 
@@ -61,8 +77,13 @@ gh pr create
 
 ## Architecture Principles
 
-- **Plugin/extension support** — Core OS is generic. Company-specific configs live in private extensions.
-- **File-based, no external deps** — No databases, no message queues. Local files only.
-- **Anti-coasting by design** — Idle detection and productivity monitoring built in.
-- **Shift boundaries** — Context refresh cycle with automatic retros and handoffs.
-- **Peer monitoring** — Agents check each other's output, not just their own.
+- **Plugin/extension support** — Core OS is generic.
+  Company-specific configs live in private extensions.
+- **File-based, no external deps** — No databases,
+  no message queues. Local files only.
+- **Anti-coasting by design** — Idle detection and
+  productivity monitoring built in.
+- **Shift boundaries** — Context refresh cycle with
+  automatic retros and handoffs.
+- **Peer monitoring** — Agents check each other's
+  output, not just their own.
