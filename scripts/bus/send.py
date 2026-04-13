@@ -70,7 +70,10 @@ def main() -> None:
     timestamp = now.strftime("%Y%m%dT%H%M%S%f") + "Z"
     msg_id = f"{args.sender}_{timestamp}"
 
-    to = ["all"] if args.to == "all" else [args.to]
+    if args.to == "all":
+        to = ["all"]
+    else:
+        to = [t.strip() for t in args.to.split(",")]
 
     msg = {
         "schema_version": 1,

@@ -73,7 +73,7 @@ def main() -> None:
                 f"{count} messages this week"
             )
 
-    agents: dict[str, dict] = {}
+    agents: dict[str, dict[str, dict[str, int]]] = {}
     print("\nREAD RECEIPTS")
     if not os.path.isdir(receipts_dir):
         print("  (no receipts found)")

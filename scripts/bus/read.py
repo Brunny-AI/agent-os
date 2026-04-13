@@ -100,7 +100,7 @@ def save_offsets_locked(
     return merged
 
 
-def is_expired(msg: dict) -> bool:
+def is_expired(msg: dict[str, object]) -> bool:
     """Check if a message has exceeded its TTL."""
     try:
         ts = datetime.fromisoformat(

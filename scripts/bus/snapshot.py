@@ -14,6 +14,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import fcntl
 import json
 import os
 from datetime import datetime, timedelta, timezone
@@ -112,7 +113,11 @@ def main() -> None:
             "body": body,
         }
         with open(current_log, "a") as f:
+            fcntl.flock(f, fcntl.LOCK_EX)
             f.write(json.dumps(snapshot_msg) + "\n")
+            f.flush()
+            os.fsync(f.fileno())
+            fcntl.flock(f, fcntl.LOCK_UN)
 
         if not os.path.exists(next_log):
             open(next_log, "w").close()
