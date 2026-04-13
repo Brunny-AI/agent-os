@@ -13,11 +13,11 @@ Usage:
 """
 
 import argparse
+import datetime
 import fcntl
 import json
 import os
 import sys
-from datetime import datetime, timezone
 
 
 def week_key() -> str:
@@ -26,7 +26,7 @@ def week_key() -> str:
     Returns:
         ISO week string like '2026-W15'.
     """
-    return datetime.now(timezone.utc).strftime("%G-W%V")
+    return datetime.datetime.now(datetime.timezone.utc).strftime("%G-W%V")
 
 
 def main() -> None:
@@ -80,7 +80,7 @@ def main() -> None:
 
     os.makedirs(channel_dir)
 
-    now = datetime.now(timezone.utc)
+    now = datetime.datetime.now(datetime.timezone.utc)
     today = now.strftime("%Y-%m-%d")
     week = week_key()
 

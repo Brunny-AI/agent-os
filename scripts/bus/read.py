@@ -16,13 +16,14 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import datetime
 import fcntl
 import glob
+import itertools
 import json
 import os
 import sys
 import tempfile
-from datetime import datetime, timezone
 
 
 def load_offsets(path: str) -> dict[str, object]:
@@ -103,11 +104,11 @@ def save_offsets_locked(
 def is_expired(msg: dict[str, object]) -> bool:
     """Check if a message has exceeded its TTL."""
     try:
-        ts = datetime.fromisoformat(
+        ts = datetime.datetime.fromisoformat(
             msg["timestamp"].replace("Z", "+00:00")
         )
         ttl = msg.get("ttl_hours", 168)
-        now = datetime.now(timezone.utc)
+        now = datetime.datetime.now(datetime.timezone.utc)
         return (now - ts).total_seconds() > ttl * 3600
     except (KeyError, ValueError, TypeError):
         return False
@@ -193,9 +194,11 @@ def main() -> None:
             current_offset = channel_offsets.get(week, 0)
 
             with open(log_file) as f:
-                lines = f.readlines()
-
-            new_lines = lines[current_offset:]
+                # Skip already-read lines efficiently
+                # (islice is implemented in C)
+                new_lines = list(
+                    itertools.islice(f, current_offset, None)
+                )
             if not new_lines:
                 continue
 
@@ -280,7 +283,7 @@ def main() -> None:
         receipt = {
             "schema_version": 1,
             "agent": args.agent,
-            "updated": datetime.now(timezone.utc)
+            "updated": datetime.datetime.now(datetime.timezone.utc)
             .isoformat()
             .replace("+00:00", "Z"),
             "offsets": merged,

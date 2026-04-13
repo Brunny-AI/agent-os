@@ -23,13 +23,13 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import datetime
 import fcntl
 import json
 import os
 import re
 import sys
 import tempfile
-from datetime import datetime, timedelta, timezone
 
 _AGENT_RE = re.compile(r"^[a-zA-Z0-9_-]+$")
 LEASE_MINUTES = 15
@@ -63,7 +63,7 @@ def _engine_path(agent: str) -> str:
 
 def _now_iso() -> str:
     """Return current UTC time as ISO 8601 string."""
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.datetime.now(datetime.timezone.utc).isoformat()
 
 
 def _load_state(agent: str) -> dict[str, object]:
@@ -112,8 +112,8 @@ def cmd_claim(args: argparse.Namespace) -> None:
     state = _load_state(args.agent)
     now = _now_iso()
     expires = (
-        datetime.now(timezone.utc)
-        + timedelta(minutes=LEASE_MINUTES)
+        datetime.datetime.now(datetime.timezone.utc)
+        + datetime.timedelta(minutes=LEASE_MINUTES)
     ).isoformat()
 
     if args.claim in state["tasks"]:
@@ -157,8 +157,8 @@ def cmd_artifact(args: argparse.Namespace) -> None:
     now = _now_iso()
     task["artifacts"].append({"path": artifact_path, "at": now})
     task["lease_expires"] = (
-        datetime.now(timezone.utc)
-        + timedelta(minutes=LEASE_MINUTES)
+        datetime.datetime.now(datetime.timezone.utc)
+        + datetime.timedelta(minutes=LEASE_MINUTES)
     ).isoformat()
 
     if task["status"] == "CLAIMED":
@@ -267,7 +267,7 @@ def cmd_block(args: argparse.Namespace) -> None:
 def cmd_check_lease(args: argparse.Namespace) -> None:
     """Check for expired task leases."""
     state = _load_state(args.agent)
-    now = datetime.now(timezone.utc)
+    now = datetime.datetime.now(datetime.timezone.utc)
     expired = []
 
     for tid, task in state["tasks"].items():
@@ -277,7 +277,7 @@ def cmd_check_lease(args: argparse.Namespace) -> None:
         if not lease:
             continue
         try:
-            expires = datetime.fromisoformat(
+            expires = datetime.datetime.fromisoformat(
                 lease.replace("Z", "+00:00")
             )
             if now > expires:
@@ -288,7 +288,7 @@ def cmd_check_lease(args: argparse.Namespace) -> None:
     if expired:
         for tid, task in expired:
             try:
-                exp_time = datetime.fromisoformat(
+                exp_time = datetime.datetime.fromisoformat(
                     task["lease_expires"].replace(
                         "Z", "+00:00"
                     )
@@ -338,7 +338,7 @@ def cmd_status(args: argparse.Namespace) -> None:
                 and status in ("CLAIMED", "IN_PROGRESS")
             ):
                 try:
-                    expires = datetime.fromisoformat(
+                    expires = datetime.datetime.fromisoformat(
                         t["lease_expires"].replace(
                             "Z", "+00:00"
                         )
@@ -346,7 +346,7 @@ def cmd_status(args: argparse.Namespace) -> None:
                     remaining = (
                         (
                             expires
-                            - datetime.now(timezone.utc)
+                            - datetime.datetime.now(datetime.timezone.utc)
                         ).total_seconds()
                         / 60
                     )
