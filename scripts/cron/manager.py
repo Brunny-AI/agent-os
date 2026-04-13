@@ -22,8 +22,10 @@ from __future__ import annotations
 
 import argparse
 import fcntl
+import glob
 import json
 import os
+import re
 import sys
 import tempfile
 from datetime import datetime, timedelta, timezone
@@ -96,9 +98,24 @@ def _save_registry(
         fcntl.flock(lock_f, fcntl.LOCK_UN)
 
 
+_AGENT_RE = re.compile(r"^[a-zA-Z0-9_-]+$")
+
+
+def _validate_agent(name: str) -> None:
+    """Validate agent name against safe pattern."""
+    if not _AGENT_RE.match(name):
+        print(
+            f"Error: invalid agent name '{name}'. "
+            f"Must match [a-zA-Z0-9_-]+",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+
 def _find_job(
-    jobs: list[dict], record_id: str
-) -> dict | None:
+    jobs: list[dict[str, object]],
+    record_id: str,
+) -> dict[str, object] | None:
     """Find a job by record ID."""
     return next(
         (j for j in jobs if j["id"] == record_id), None
@@ -110,6 +127,7 @@ def _find_job(
 
 def cmd_register(args: argparse.Namespace) -> None:
     """Register a cron job in the registry."""
+    _validate_agent(args.agent)
     path = _registry_path()
     data = _load_registry(path)
     now = _now_iso()
@@ -175,6 +193,7 @@ def cmd_register(args: argparse.Namespace) -> None:
 
 def cmd_heartbeat(args: argparse.Namespace) -> None:
     """Update heartbeat timestamp for a registered job."""
+    _validate_agent(args.agent)
     path = _registry_path()
     data = _load_registry(path)
     now = _now_iso()
@@ -360,6 +379,7 @@ def cmd_checkout(args: argparse.Namespace) -> None:
     is configurable via config/agent-os.yaml or defaults
     to 'founder'.
     """
+    _validate_agent(args.agent)
     path = _registry_path()
     data = _load_registry(path)
     now = _now_iso()
@@ -432,8 +452,6 @@ def _check_checkout_approval(
     Returns:
         True if a matching approval message was found.
     """
-    import glob
-
     now = datetime.now(timezone.utc)
     cutoff = now - timedelta(minutes=60)
 

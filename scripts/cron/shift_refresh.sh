@@ -48,9 +48,9 @@ if ! grep -q -- "${SENTINEL}" "${HANDOFF}" 2>/dev/null; then
 fi
 
 # Update shift state (tracks shift count and timing)
-SHIFT_NUM=1
+shift_num=1
 if [[ -f "${SHIFT_STATE}" ]]; then
-  SHIFT_NUM=$(python3 -c "
+  shift_num=$(python3 -c "
 import json, sys
 try:
     with open(sys.argv[1]) as f:
@@ -58,7 +58,7 @@ try:
     print(state.get('shift_count', 0) + 1)
 except Exception:
     print(1)
-" "${SHIFT_STATE}" 2>/dev/null || echo 1)
+" "${SHIFT_STATE}" || echo 1)
 fi
 
 # Atomic write for shift state (tmp + mv)
@@ -80,7 +80,7 @@ fd, tmp = tempfile.mkstemp(dir=parent, suffix='.tmp')
 with os.fdopen(fd, 'w') as f:
     json.dump(state, f, indent=2)
 os.replace(tmp, state_path)
-" "${AGENT}" "${SHIFT_NUM}" "${REASON}" "${HANDOFF}" "${SHIFT_STATE}" 2>/dev/null
+" "${AGENT}" "${shift_num}" "${REASON}" "${HANDOFF}" "${SHIFT_STATE}"
 
 # Atomic flag write
 readonly FLAG_DIR=$(dirname "${FLAG}")
@@ -88,7 +88,7 @@ readonly FLAG_TMP=$(mktemp "${FLAG_DIR}/shift-refresh-XXXXXX.tmp")
 echo "${REASON}" > "${FLAG_TMP}"
 mv "${FLAG_TMP}" "${FLAG}"
 
-echo "Shift refresh flag written for ${AGENT} (shift #${SHIFT_NUM})"
+echo "Shift refresh flag written for ${AGENT} (shift #${shift_num})"
 echo "Reason: ${REASON}"
 echo "The sidecar watcher will terminate Claude shortly."
 echo "DO NOT write any more files after this point."
