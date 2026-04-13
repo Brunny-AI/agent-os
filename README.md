@@ -151,6 +151,16 @@ Filesystem-based idle detection. Four status levels:
 python3 scripts/monitor/output_clock.py --all --json
 ```
 
+### Meeting System (`defaults/meetings/`)
+
+Round-based discussion templates for 6 meeting types:
+standup, general, postmortem, retro, brainstorm, 1:1.
+
+Every meeting follows: pre-read, R1 positions (50 words),
+R2 mandatory challenge (75 words), facilitator synthesis.
+
+See `defaults/meetings/README.md` for the full protocol.
+
 ### Config (`scripts/config/`)
 
 Override-based configuration. Defaults ship with the repo.
