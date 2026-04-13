@@ -18,4 +18,4 @@ Under active development. Components being ported from production.
 
 ## License
 
-MIT
+[MIT](LICENSE)
