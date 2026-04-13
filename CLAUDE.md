@@ -48,6 +48,16 @@ Follow `.gemini/styleguide.md` for all code. Key rules:
 python3 scripts/test_*.py
 ```
 
+## Privacy (PUBLIC REPO)
+
+This is a public repository. Every file is visible to the world.
+
+- **No real names** — use `{agent}`, `{founder}`, role titles
+- **No real email addresses** — use `{agent}@example.com`
+- **No credential paths, SSH keys, or token references**
+- **No company-specific internal tool names or workspace paths**
+- **Pre-push check:** `grep -rn "your-company\|@your-domain" . --include="*.md" --include="*.py" --include="*.sh" | grep -v .git`
+
 ## Git Workflow
 
 All changes go through pull requests. No direct commits to main.
