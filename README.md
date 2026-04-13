@@ -171,6 +171,46 @@ python3 scripts/config/loader.py --validate
 python3 scripts/config/loader.py --key tasks.lease_minutes
 ```
 
+### Autonomous Mode (`scripts/cron/agent_loop.sh`)
+
+Runs an agent in a loop with automatic shift refresh.
+No human needed for restarts.
+
+```bash
+# Start an agent in autonomous mode
+bash scripts/cron/agent_loop.sh builder-1
+
+# Or run in a detached screen session
+screen -dmS builder-1 bash scripts/cron/agent_loop.sh builder-1
+```
+
+The wrapper:
+- Starts Claude with a session-start prompt (shift 1)
+  or session-refresh prompt (shift 2+)
+- Spawns a sidecar that watches for a shift-refresh
+  flag file
+- When the agent writes the flag (via `shift_refresh.sh`),
+  the sidecar kills Claude and the wrapper restarts
+- Detects crash loops (3 rapid exits) and stops with
+  an alert
+
+### Watchdog (`scripts/monitor/watchdog.sh`)
+
+External monitoring for agent liveness. Run via
+launchd or system cron every 5 minutes.
+
+```bash
+# Check all agents, alert via macOS notification
+bash scripts/monitor/watchdog.sh --notify
+
+# Check + push notification via ntfy.sh
+bash scripts/monitor/watchdog.sh --ntfy my-topic
+```
+
+If an agent's heartbeat is expired, the watchdog
+tries auto-recovery (restart in screen/tmux) and
+sends alerts to the bus and optionally to your phone.
+
 ## Design Principles
 
 1. **Zero dependencies.** Everything runs with Python
@@ -208,6 +248,8 @@ Key settings:
 | `monitoring.stale_threshold_polls` | 3 | Polls before STALE |
 | `cron.poll_timeout_minutes` | 15 | Heartbeat timeout |
 | `bus.default_ttl_hours` | 168 | Message TTL (1 week) |
+| `autonomous.grace_period_seconds` | 5 | Sidecar kill delay |
+| `autonomous.crash_loop_threshold` | 3 | Rapid exits before stop |
 
 ## License
 

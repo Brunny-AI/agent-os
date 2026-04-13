@@ -192,6 +192,50 @@ for future migration tooling.
 - Bus offsets use max-merge: concurrent writers can
   never regress another agent's read position
 
+## Autonomous Mode
+
+Interactive mode (default) requires manual session
+management. Autonomous mode adds a wrapper that runs
+Claude in a loop, refreshing context automatically.
+
+```
+agent_loop.sh (wrapper, runs forever)
+  |
+  +--> Shift 1: Claude + /session-start
+  |      |
+  |      +--> Sidecar watches for flag file
+  |      +--> Agent hits 4h boundary
+  |      +--> Agent: retro + handoff + shift_refresh.sh
+  |      +--> Sidecar: detects flag, kills Claude
+  |
+  +--> Shift 2: Claude + /session-refresh
+  |      |
+  |      +--> Reads handoff, restores crons
+  |      +--> Resumes work with fresh context
+  |      +--> (repeat)
+  |
+  +--> Crash detection
+         |
+         +--> Rapid exit? Exponential backoff
+         +--> 3 rapid exits? CRASH LOOP, stop + alert
+```
+
+**Sidecar pattern:** Claude Code refuses to kill its
+own parent process (safety guardrail). The sidecar
+runs as a background subshell, watches for a flag
+file, and sends SIGTERM externally.
+
+**Race mitigations:**
+1. Atomic flag write (tmp + mv)
+2. Git lock check before kill
+3. Grace period for I/O completion
+4. Process name verification
+5. SIGTERM with SIGKILL escalation (10s timeout)
+
+**External monitoring:** `watchdog.sh` runs outside
+Claude (via launchd or system cron). Checks heartbeats
+and auto-restarts dead agents in screen/tmux sessions.
+
 ## Runtime vs Source Boundary
 
 ```

@@ -88,6 +88,16 @@ workflow:
       review: true
       merge: false
 
+# Autonomous mode (agent_loop.sh)
+autonomous:
+  startup_prompt: "defaults/prompts/session-start.md"
+  refresh_prompt: "defaults/prompts/session-refresh.md"
+  crash_loop_threshold: 3
+  rapid_exit_seconds: 30
+  sidecar_poll_seconds: 2
+  grace_period_seconds: 5
+  session_manager: "screen"
+
 # Paths (relative to AGENT_OS_ROOT)
 paths:
   bus_root: "system/bus"
