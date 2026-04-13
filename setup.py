@@ -334,8 +334,20 @@ def cmd_init(args: argparse.Namespace) -> None:
             f"\nTeam: {team.get('name', 'default')} "
             f"({len(agents)} agents)"
         )
+        for agent in agents:
+            if isinstance(agent, dict):
+                n = agent.get("name", "?")
+                r = agent.get("role", "?")
+            else:
+                n, r = str(agent), "builder"
+            print(f"  - {n} ({r})")
         print(
-            "Run 'python3 setup.py status' to verify."
+            "\nEdit config/agent-os.yaml to customize "
+            "team composition."
+        )
+        print(
+            "Run 'python3 setup.py validate' to check "
+            "your setup."
         )
 
 
