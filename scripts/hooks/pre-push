@@ -6,17 +6,62 @@ set -euo pipefail
 
 echo "Running privacy scan..." >&2
 
-readonly MATCHES
-MATCHES="$(grep -rnE \
-  'brunny|@brunny|airbnb|Airbnb|quantcast|Quantcast|dong@|weiling@|Google.Drive' \
-  . --exclude-dir=.git --include='*.md' --include='*.py' \
-  --include='*.sh' --include='*.yaml' --include='*.json' \
+local_fail=0
+
+# 1. Generic email detector (catches real addresses,
+#    allows {agent}@example.com placeholders)
+email_matches="$(grep -rnE \
+  '[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}' \
+  . --exclude-dir=.git --exclude-dir=scripts/hooks \
+  --include='*.md' --include='*.py' \
+  --include='*.yaml' --include='*.json' \
+  2>/dev/null \
+  | grep -v '@example\.com' \
+  | grep -v '@your-domain' \
+  | grep -v 'placeholder' \
+  || true)"
+
+if [[ -n "${email_matches}" ]]; then
+  echo "ERROR: Real email addresses found:" >&2
+  echo "${email_matches}" >&2
+  local_fail=1
+fi
+
+# 2. Credential/path patterns
+path_matches="$(grep -rnE \
+  '/Users/[a-zA-Z]|/home/[a-zA-Z]|/ssh/id_|BEGIN.*PRIVATE KEY' \
+  . --exclude-dir=.git --exclude-dir=scripts/hooks \
+  --include='*.md' --include='*.py' \
+  --include='*.sh' --include='*.yaml' \
+  --include='*.json' \
   2>/dev/null || true)"
 
-if [[ -n "${MATCHES}" ]]; then
-  echo "ERROR: Privacy scan FAILED. Prohibited" >&2
-  echo "terms found:" >&2
-  echo "${MATCHES}" >&2
+if [[ -n "${path_matches}" ]]; then
+  echo "ERROR: Credential or path patterns found:" >&2
+  echo "${path_matches}" >&2
+  local_fail=1
+fi
+
+# 3. Project-specific denylist (extend as needed).
+#    Loaded from config if present.
+denylist_file="config/privacy-denylist.txt"
+if [[ -f "${denylist_file}" ]]; then
+  while IFS= read -r term; do
+    [[ -z "${term}" || "${term}" == \#* ]] && continue
+    deny_match="$(grep -rn "${term}" \
+      . --exclude-dir=.git \
+      --exclude-dir=scripts/hooks \
+      --exclude='privacy-denylist.txt' \
+      2>/dev/null || true)"
+    if [[ -n "${deny_match}" ]]; then
+      echo "ERROR: Denylist term '${term}' found:" >&2
+      echo "${deny_match}" >&2
+      local_fail=1
+    fi
+  done < "${denylist_file}"
+fi
+
+if [[ "${local_fail}" -eq 1 ]]; then
   echo "" >&2
   echo "Fix these before pushing. See" >&2
   echo ".claude/rules/privacy-boundary.md" >&2

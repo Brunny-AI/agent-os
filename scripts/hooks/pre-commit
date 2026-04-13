@@ -4,10 +4,9 @@
 
 set -euo pipefail
 
-readonly BRANCH
-BRANCH="$(git symbolic-ref --short HEAD 2>/dev/null || true)"
+branch="$(git symbolic-ref --short HEAD 2>/dev/null || true)"
 
-if [[ "${BRANCH}" == "main" ]]; then
+if [[ "${branch}" == "main" ]]; then
   echo "ERROR: Direct commits to main are blocked." >&2
   echo "Create a branch first:" >&2
   echo "  git checkout -b {agent}/{description}" >&2
@@ -16,7 +15,9 @@ if [[ "${BRANCH}" == "main" ]]; then
 fi
 
 # Validate branch naming: must match agent/description
-if [[ -n "${BRANCH}" ]] && ! echo "${BRANCH}" | grep -qE '^[a-z][-a-z0-9]*/[a-z][-a-z0-9]*$'; then
-  echo "WARNING: Branch '${BRANCH}' doesn't match" >&2
-  echo "the {agent}/{description} naming convention." >&2
+if [[ -n "${branch}" ]] \
+  && ! echo "${branch}" \
+    | grep -qE '^[a-z][-a-z0-9]*/[a-z][-a-z0-9]*$'; then
+  echo "WARNING: Branch '${branch}' doesn't match" >&2
+  echo "the {agent}/{description} convention." >&2
 fi
