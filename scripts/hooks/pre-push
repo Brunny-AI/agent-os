@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+# Pre-push hook: scan for private info before pushing.
+# Install: cp scripts/hooks/pre-push .git/hooks/pre-push
+
+set -euo pipefail
+
+echo "Running privacy scan..." >&2
+
+readonly PRIVACY_DENYLIST="config/privacy-denylist.txt"
+
+local_fail=0
+
+# 1. Generic email detector (catches real addresses,
+#    allows {agent}@example.com placeholders)
+email_matches="$(grep -rnE \
+  '[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}' \
+  . --exclude-dir=.git --exclude-dir=scripts/hooks \
+  --include='*.md' --include='*.py' \
+  --include='*.sh' --include='*.yaml' \
+  --include='*.json' \
+  2>/dev/null \
+  | grep -v '@example\.com' \
+  | grep -v 'placeholder' \
+  || true)"
+
+if [[ -n "${email_matches}" ]]; then
+  echo "ERROR: Real email addresses found:" >&2
+  echo "${email_matches}" >&2
+  local_fail=1
+fi
+
+# 2. Credential/path patterns
+path_matches="$(grep -rnE \
+  '/Users/[a-zA-Z]|/home/[a-zA-Z]|/ssh/id_|BEGIN.*PRIVATE KEY' \
+  . --exclude-dir=.git --exclude-dir=scripts/hooks \
+  --include='*.md' --include='*.py' \
+  --include='*.sh' --include='*.yaml' \
+  --include='*.json' \
+  2>/dev/null || true)"
+
+if [[ -n "${path_matches}" ]]; then
+  echo "ERROR: Credential or path patterns found:" >&2
+  echo "${path_matches}" >&2
+  local_fail=1
+fi
+
+# 3. Project-specific denylist (extend as needed).
+#    Loaded from config if present.
+if [[ -f "${PRIVACY_DENYLIST}" ]]; then
+  while read -r term || [[ -n "${term}" ]]; do
+    [[ -z "${term}" || "${term}" == \#* ]] && continue
+    deny_match="$(grep -rn -- "${term}" \
+      . --exclude-dir=.git \
+      --exclude-dir=scripts/hooks \
+      --exclude="$(basename "${PRIVACY_DENYLIST}")" \
+      --include='*.md' --include='*.py' \
+      --include='*.sh' --include='*.yaml' \
+      --include='*.json' \
+      2>/dev/null || true)"
+    if [[ -n "${deny_match}" ]]; then
+      echo "ERROR: Denylist term '${term}' found:" >&2
+      echo "${deny_match}" >&2
+      local_fail=1
+    fi
+  done < "${PRIVACY_DENYLIST}"
+fi
+
+if [[ "${local_fail}" -eq 1 ]]; then
+  echo "" >&2
+  echo "Fix these before pushing. See" >&2
+  echo ".claude/rules/privacy-boundary.md" >&2
+  exit 1
+fi
+
+echo "Privacy scan passed." >&2

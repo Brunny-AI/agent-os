@@ -1,13 +1,62 @@
 # Agent OS
 
-Open-source management system for AI agent teams.
-Operational philosophy included.
+Configurable framework for running multi-agent
+Claude Code teams. Operational philosophy included.
+
+## What This Is
+
+- **For:** Claude Code users who want multi-agent
+  operations without building coordination plumbing
+- **Runtime:** Claude Code + Python 3.10+ + Bash + Unix
+- **Dependencies:** Zero external. No databases, no
+  message queues, no cloud services.
+- **License:** MIT
+
+## MVP Components (7)
+
+1. Event Bus (agent messaging, JSONL, peek/commit)
+2. Cron Manager (scheduling, heartbeats, watchdog)
+3. Task Engine (work queue, 15-min leases)
+4. Output Clock (filesystem-based idle detection)
+5. Meeting System (round-based with challenges)
+6. Agent Registry (team definition)
+7. Shift Manager (4h context refresh lifecycle)
+
+Not in MVP: Skill System, Rule System (v2).
+
+## Repository Structure
+
+```
+defaults/          # Read-only shipped defaults
+config/            # User overrides (gitignored)
+scripts/           # Core OS scripts
+examples/          # Ready-to-run team configs
+docs/              # Architecture and guides
+setup.py           # python3 setup.py init
+```
+
+Runtime dirs (gitignored, created by setup):
+- `system/` (bus channels, receipts, cron registry)
+- `workspaces/` (per-agent state, logs, memory)
+
+## Rules
+
+Architectural decisions and constraints live in
+`.claude/rules/`. These are enforced on every change:
+
+| Rule | What it governs |
+|------|----------------|
+| `architecture.md` | MVP scope, components, modes |
+| `design-constraints.md` | Dependencies, formats, concurrency |
+| `privacy-boundary.md` | What's public vs private |
+| `implementation-phases.md` | Build order, PR rules |
+| `pr-workflow.md` | PR process, review pipeline |
 
 ## Languages
 
-- **Python 3.10+** — Core scripts
-- **Bash** — Shell scripts
-- **Markdown** — Configuration, documentation
+- **Python 3.10+** for core scripts
+- **Bash** for shell scripts
+- **Markdown** for config, documentation
 
 ## Coding Standards
 
@@ -50,22 +99,25 @@ added.
 
 ## Privacy (PUBLIC REPO)
 
-This is a public repository. Every file is visible to the world.
+This is a public repository. Every file is visible
+to the world. See `.claude/rules/privacy-boundary.md`
+for the full policy.
 
-- **No real names** — use `{agent}`, `{founder}`, role titles
-- **No real email addresses** — use `{agent}@example.com`
-- **No credential paths, SSH keys, or token references**
-- **No company-specific internal tool names or workspace paths**
+- **No real names** -- use `{agent}`, `{founder}`
+- **No real emails** -- use `{agent}@example.com`
+- **No credentials, SSH keys, or token references**
+- **No company-specific paths or tool names**
 - **Pre-push check:**
 
 ```bash
 grep -rnE "your-company|@your-domain" . \
-  --exclude-dir=.git
+  --exclude-dir=.git --exclude-dir=scripts/hooks
 ```
 
 ## Git Workflow
 
-All changes go through pull requests. No direct commits to main.
+All changes go through pull requests. No direct
+commits to main.
 
 ```bash
 git checkout -b {agent}/{description}
@@ -79,21 +131,23 @@ gh pr create
 
 ## PR Review Pipeline
 
-1. Privacy scan (grep for private info before pushing)
-2. Internal: automated adversarial review + peer review + compliance review
-3. External: Gemini Code Assist auto-reviews on GitHub
-4. Address feedback, then `/gemini review` to re-check
+1. Privacy scan (grep for private info)
+2. Internal review (Alex compliance check)
+3. Gemini Code Assist auto-review on GitHub
+4. Address feedback, `/gemini review` to re-check
 5. Merge when clean
 
-## Architecture Principles
+## Key Design Decisions
 
-- **Plugin/extension support** — Core OS is generic.
-  Company-specific configs live in private extensions.
-- **File-based, no external deps** — No databases,
-  no message queues. Local files only.
-- **Anti-coasting by design** — Idle detection and
-  productivity monitoring built in.
-- **Shift boundaries** — Context refresh cycle with
-  automatic retros and handoffs.
-- **Peer monitoring** — Agents check each other's
-  output, not just their own.
+- **Override-based config:** users customize via
+  `config/`, core files stay untouched
+- **Monolith with defaults:** one command gets a
+  working 3-agent team, complexity hidden
+- **Philosophy as defaults:** anti-coasting, idle
+  detection, shift boundaries are on by default,
+  tunable via config
+- **Convergence:** public repo IS the production
+  runtime. No internal fork.
+- **Fresh installs only:** MVP does not support
+  in-place upgrades. schema_version in all files
+  for future migration.
