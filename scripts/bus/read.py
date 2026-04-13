@@ -21,10 +21,11 @@ import glob
 import json
 import os
 import sys
+import tempfile
 from datetime import datetime, timezone
 
 
-def load_offsets(path: str) -> dict:
+def load_offsets(path: str) -> dict[str, object]:
     """Load offset state from disk, or return empty defaults.
 
     Returns empty defaults if the file is missing or corrupt.
@@ -83,11 +84,18 @@ def save_offsets_locked(
                 old = merged.get(ch, {}).get(wk, 0)
                 merged[ch][wk] = max(old, val)
         existing["offsets"] = merged
-        with open(path, "w") as f:
-            json.dump(existing, f, indent=2)
-            f.write("\n")
-            f.flush()
-            os.fsync(f.fileno())
+        parent = os.path.dirname(path) or "."
+        fd, tmp = tempfile.mkstemp(dir=parent)
+        try:
+            with os.fdopen(fd, "w") as f:
+                json.dump(existing, f, indent=2)
+                f.write("\n")
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(tmp, path)
+        except BaseException:
+            os.unlink(tmp)
+            raise
         fcntl.flock(lock_f, fcntl.LOCK_UN)
     return merged
 
@@ -101,7 +109,7 @@ def is_expired(msg: dict) -> bool:
         ttl = msg.get("ttl_hours", 168)
         now = datetime.now(timezone.utc)
         return (now - ts).total_seconds() > ttl * 3600
-    except Exception:
+    except (KeyError, ValueError, TypeError):
         return False
 
 
@@ -277,11 +285,17 @@ def main() -> None:
             .replace("+00:00", "Z"),
             "offsets": merged,
         }
-        with open(receipt_path, "w") as rf:
-            json.dump(receipt, rf, indent=2)
-            rf.write("\n")
-            rf.flush()
-            os.fsync(rf.fileno())
+        fd, tmp = tempfile.mkstemp(dir=receipt_dir)
+        try:
+            with os.fdopen(fd, "w") as rf:
+                json.dump(receipt, rf, indent=2)
+                rf.write("\n")
+                rf.flush()
+                os.fsync(rf.fileno())
+            os.replace(tmp, receipt_path)
+        except BaseException:
+            os.unlink(tmp)
+            raise
         print(f"Read receipt updated: {receipt_path}")
 
 

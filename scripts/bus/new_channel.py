@@ -13,6 +13,7 @@ Usage:
 """
 
 import argparse
+import fcntl
 import json
 import os
 import sys
@@ -20,7 +21,11 @@ from datetime import datetime, timezone
 
 
 def week_key() -> str:
-    """Return the current ISO week key (e.g. '2026-W15')."""
+    """Return the current ISO week key.
+
+    Returns:
+        ISO week string like '2026-W15'.
+    """
     return datetime.now(timezone.utc).strftime("%G-W%V")
 
 
@@ -114,7 +119,11 @@ def main() -> None:
         "owner": args.owner,
     }
     with open(index_path, "a") as f:
+        fcntl.flock(f, fcntl.LOCK_EX)
         f.write(json.dumps(index_entry) + "\n")
+        f.flush()
+        os.fsync(f.fileno())
+        fcntl.flock(f, fcntl.LOCK_UN)
 
     print(f"Created channel: {args.name}")
     print(f"  type:     {args.type}")

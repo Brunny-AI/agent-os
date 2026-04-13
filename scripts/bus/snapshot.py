@@ -88,7 +88,7 @@ def main() -> None:
 
         with open(current_log) as f:
             msg_count = sum(
-                1 for line in f.readlines() if line.strip()
+                1 for line in f if line.strip()
             )
 
         body = (

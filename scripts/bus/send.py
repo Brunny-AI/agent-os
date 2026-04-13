@@ -13,6 +13,7 @@ Usage:
 """
 
 import argparse
+import fcntl
 import json
 import os
 import sys
@@ -87,7 +88,11 @@ def main() -> None:
         open(log_file, "w").close()
 
     with open(log_file, "a") as f:
+        fcntl.flock(f, fcntl.LOCK_EX)
         f.write(json.dumps(msg) + "\n")
+        f.flush()
+        os.fsync(f.fileno())
+        fcntl.flock(f, fcntl.LOCK_UN)
 
     print(f"Sent: {msg_id} -> {args.channel}")
 
