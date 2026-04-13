@@ -1,8 +1,8 @@
 # PR Workflow
 
-## Scope
-Applies to the agent-os public repo. Every change
-goes through a pull request. No exceptions.
+Agent OS enforces a pull request workflow by default.
+Customize the review steps in `config/agent-os.yaml`
+under the `workflow` key.
 
 ## Core Rule
 **No direct commits to main.** Enforced by
@@ -10,56 +10,49 @@ pre-commit hook (`scripts/hooks/pre-commit`).
 
 ## Change Size Limit
 Every PR must be under **1000 lines changed**.
+Override: `workflow.max_pr_lines` in config.
 
-## Privacy Gate (MANDATORY before every push)
+## Review Sequence
 
-This is a public repo. Every file is visible.
-Enforced by pre-push hook (`scripts/hooks/pre-push`).
-
-- **No real names** of any person
-- **No email addresses** (use `{agent}@example.com`)
-- **No SSH paths, token paths, or credentials**
-- **No company-specific tool references**
-
-## Internal Review Sequence
-
-Every change follows this exact sequence.
-No steps may be skipped. (INC-009 fix)
+Every change follows this sequence. Steps can be
+configured (enabled/disabled) in config but the
+defaults enforce all of them.
 
 ### Step 1: Privacy Scan
-Run the pre-push hook manually:
+Run the pre-push hook before every push:
+```bash
+bash scripts/hooks/pre-push
+```
+Or manually:
 ```bash
 grep -rnE "your-company|@your-domain" . \
   --exclude-dir=.git \
   --exclude-dir=scripts/hooks
 ```
-Fix all matches before proceeding.
+Catches real names, emails, credentials, and
+company-specific references. Customize the pattern
+in `config/agent-os.yaml` under `workflow.privacy_patterns`.
 
-### Step 2: Adversarial Review
-Run `/codex:adversarial-review` on the diff.
-Address all findings using `/address-feedback`.
-Do not proceed until review is clean.
+### Step 2: Peer Review
+At least 2 agents (not including the author) must
+review and approve. Use the meeting system for
+structured review discussions.
 
-### Step 3: Peer Review Meeting (MANDATORY)
-Open a review meeting on the bus. This step cannot
-be skipped or replaced by founder approval alone.
-Require sign-off from at least 2 agents (not
-including the author). Every code change gets
-reviewed by teammates in a meeting before any PR
-is opened. Record the meeting channel in the PR
-template. Founder directive: "make sure all future
-code changes review with them in an internal
-meeting."
+How you run peer review is up to your team:
+- Bus meeting channel (built-in)
+- GitHub PR comments
+- External review tools
 
-### Step 4: Open Pull Request
-Push branch and create PR using the template at
-`.github/pull_request_template.md`. All checklist
-items must be filled with artifact links.
+Config: `workflow.min_reviewers` (default: 2)
 
-### Step 5: External Review
-Gemini Code Assist auto-reviews on GitHub. Address
-feedback, then `/gemini review` to re-check.
-Merge when clean.
+### Step 3: Open Pull Request
+Push branch and create PR. If using GitHub, the
+template at `.github/pull_request_template.md`
+provides a checklist.
+
+### Step 4: Merge
+Merge when review criteria are met. The pre-commit
+hook prevents direct pushes to main regardless.
 
 ## Git Identity (per-commit)
 ```bash
@@ -69,28 +62,41 @@ git -c user.name="{agent}" \
 ```
 
 ## Branch Naming
-Use: `{agent}/{description}`
-(e.g., `scout/port-event-bus`)
+```
+{agent}/{description}
+```
 
-## Who Can Do What
+## Role Permissions
 
-| Action | Founder | Builder | CoS |
-|--------|---------|---------|-----|
+Roles are defined in your agent registry. Default
+permissions:
+
+| Action | coordinator | builder | reviewer |
+|--------|------------|---------|----------|
 | Open PR | Yes | Yes | No |
 | Peer review | Yes | Yes | Yes |
-| Compliance review | No | No | Yes |
 | Approve + merge | Yes | Yes | No |
 
-## Git Hooks (install after clone)
+Override by defining `workflow.permissions` in config.
+
+## Git Hooks
+
+Installed automatically by `setup.py init`:
 ```bash
 cp scripts/hooks/pre-commit .git/hooks/
 cp scripts/hooks/pre-push .git/hooks/
 chmod +x .git/hooks/pre-commit .git/hooks/pre-push
 ```
 
-`setup.py init` installs these automatically.
+## Extending the Workflow
 
-## Architecture Constraint
-The repo must support a plugin/extension system.
-Company-specific config lives in private extensions,
-not in the core repo.
+Add custom review steps by creating rules in
+`config/rules/` (not yet supported in MVP; use
+`.claude/rules/` directly for now). Common additions:
+
+- **Security review**: Add a step between privacy
+  scan and peer review for security-sensitive changes
+- **External CI**: Add GitHub Actions, Gemini Code
+  Assist, or other automated reviewers as a step
+- **Compliance gate**: Require coordinator sign-off
+  on changes touching shared infrastructure

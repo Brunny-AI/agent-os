@@ -61,6 +61,33 @@ bus:
   default_ttl_hours: 168
   snapshot_ttl_hours: 8760
 
+# PR workflow
+workflow:
+  max_pr_lines: 1000
+  min_reviewers: 2
+  privacy_scan: true
+  privacy_patterns:
+    - "your-company"
+    - "@your-domain"
+  steps:
+    - "privacy_scan"
+    - "peer_review"
+    - "open_pr"
+    - "merge"
+  permissions:
+    coordinator:
+      open_pr: true
+      review: true
+      merge: true
+    builder:
+      open_pr: true
+      review: true
+      merge: true
+    reviewer:
+      open_pr: false
+      review: true
+      merge: false
+
 # Paths (relative to AGENT_OS_ROOT)
 paths:
   bus_root: "system/bus"

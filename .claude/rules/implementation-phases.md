@@ -34,12 +34,9 @@ verify privacy boundary, test standalone.
 ## PR Rules
 - Under 1000 lines per PR
 - Privacy scan before every push
-- Alex compliance review on every commit
-- Gemini Code Assist review on every PR
+- Peer review per `.claude/rules/pr-workflow.md`
 - Each PR must work standalone (no broken states
   between PRs)
-- Every PR dogfooded: internal system must still
-  work after the change
 
 ## What NOT to build
 - Windows support

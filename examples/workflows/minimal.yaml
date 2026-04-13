@@ -1,0 +1,17 @@
+# Minimal Workflow -- For small teams or private repos
+#
+# Reduces overhead:
+# - No privacy scan (private repo, nothing to leak)
+# - Single reviewer (solo dev or 2-person team)
+# - No custom steps
+#
+# Copy the workflow section into config/agent-os.yaml.
+
+workflow:
+  max_pr_lines: 2000
+  min_reviewers: 1
+  privacy_scan: false
+  steps:
+    - "peer_review"
+    - "open_pr"
+    - "merge"
