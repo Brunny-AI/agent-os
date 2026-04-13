@@ -22,13 +22,15 @@ Claude Code teams. Operational philosophy included.
 6. Agent Registry (team definition)
 7. Shift Manager (4h context refresh lifecycle)
 
-Not in MVP: Skill System, Rule System (v2).
+Not in MVP: Skill System (v2).
 
 ## Repository Structure
 
 ```
 defaults/          # Read-only shipped defaults
+  rules/           # Default rules (source of truth)
 config/            # User overrides (gitignored)
+  rules/           # Rule overrides (gitignored)
 scripts/           # Core OS scripts
 examples/          # Ready-to-run team configs
 docs/              # Architecture and guides
@@ -38,11 +40,16 @@ setup.py           # python3 setup.py init
 Runtime dirs (gitignored, created by setup):
 - `system/` (bus channels, receipts, cron registry)
 - `workspaces/` (per-agent state, logs, memory)
+- `.claude/rules/` (merged from defaults + config)
 
 ## Rules
 
-Architectural decisions and constraints live in
-`.claude/rules/`. These are enforced on every change:
+Rules are shipped in `defaults/rules/` and merged
+into `.claude/rules/` by `setup.py init`. Override
+any rule by placing a file with the same name in
+`config/rules/`. Claude Code loads the merged result.
+
+Default rules:
 
 | Rule | What it governs |
 |------|----------------|

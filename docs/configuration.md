@@ -197,6 +197,49 @@ All paths are relative to `AGENT_OS_ROOT` (or the
 repo root if unset). Change these if your deployment
 layout differs from the default.
 
+## Rules Override
+
+Rules work the same way as config: defaults ship
+with the repo, you override with your own.
+
+```
+defaults/rules/pr-workflow.md    <-- shipped
+config/rules/pr-workflow.md      <-- your override
+.claude/rules/pr-workflow.md     <-- merged (runtime)
+```
+
+Run `python3 setup.py init` to merge. The setup
+script copies all files from `defaults/rules/`, then
+overwrites with any matching files from `config/rules/`.
+You can also add entirely new rules in `config/rules/`
+that don't exist in defaults.
+
+### Example: Override the PR workflow
+
+```bash
+mkdir -p config/rules
+cp defaults/rules/pr-workflow.md config/rules/
+# Edit config/rules/pr-workflow.md with your process
+python3 setup.py init
+```
+
+Claude Code loads `.claude/rules/` automatically, so
+your overridden rules take effect immediately in the
+next session.
+
+### Example: Add a custom rule
+
+```bash
+cat > config/rules/security-review.md << 'EOF'
+# Security Review
+
+All changes to scripts/ require security review
+before merge. Check for command injection, path
+traversal, and credential exposure.
+EOF
+python3 setup.py init
+```
+
 ## CLI
 
 ```bash
