@@ -23,6 +23,7 @@ Key rules:
   specify type parameters for generic types)
 - Google-style docstrings with Args/Returns/Raises
 - No bare `except:`, no mutable default arguments
+- Module-level docstrings required; no relative imports
 - Use f-strings for formatting
 - Sort imports lexicographically within groups:
   stdlib, third-party, local
@@ -36,6 +37,7 @@ Key rules:
   (`UPPERCASE_WITH_UNDERSCORES`)
 - Errors to STDERR (`>&2`), always check return values
 - Use `"$@"` for passing arguments
+- Function header comments for non-trivial functions
 - Scripts over 100 lines should be Python instead
 
 ## Documentation Accuracy
