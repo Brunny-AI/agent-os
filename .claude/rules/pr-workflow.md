@@ -39,10 +39,16 @@ Run `/codex:adversarial-review` on the diff.
 Address all findings using `/address-feedback`.
 Do not proceed until review is clean.
 
-### Step 3: Peer Review (2-agent minimum)
-Open a review meeting on the bus. Require sign-off
-from at least 2 agents (not including the author).
-Record the meeting channel in the PR template.
+### Step 3: Peer Review Meeting (MANDATORY)
+Open a review meeting on the bus. This step cannot
+be skipped or replaced by founder approval alone.
+Require sign-off from at least 2 agents (not
+including the author). Every code change gets
+reviewed by teammates in a meeting before any PR
+is opened. Record the meeting channel in the PR
+template. Founder directive: "make sure all future
+code changes review with them in an internal
+meeting."
 
 ### Step 4: Open Pull Request
 Push branch and create PR using the template at
