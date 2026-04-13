@@ -111,7 +111,7 @@ for the full policy.
 
 ```bash
 grep -rnE "your-company|@your-domain" . \
-  --exclude-dir=.git
+  --exclude-dir=.git --exclude-dir=scripts/hooks
 ```
 
 ## Git Workflow
