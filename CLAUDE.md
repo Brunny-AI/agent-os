@@ -22,7 +22,8 @@ Key rules:
 - Google-style docstrings with Args/Returns/Raises
 - No bare `except:`, no mutable default arguments
 - Use f-strings for formatting
-- Sort imports lexicographically
+- Group imports: stdlib, third-party, local
+- Import packages/modules only, not individual names
 
 ### Shell
 - 2-space indentation, 80 char line limit
@@ -30,6 +31,7 @@ Key rules:
 - Quote all variables: `"${var}"` not `$var`
 - Use `local` for variables, `readonly` for constants
 - Errors to STDERR (`>&2`), always check return values
+- Use `"$@"` for passing arguments
 - Scripts over 100 lines should be Python instead
 
 ## Documentation Accuracy
