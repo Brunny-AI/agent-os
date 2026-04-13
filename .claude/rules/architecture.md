@@ -1,4 +1,4 @@
-# Architecture Decisions (Founder-Aligned 2026-04-12)
+# Architecture Decisions
 
 ## Product Definition
 - Agent OS is a configurable, opinionated framework for

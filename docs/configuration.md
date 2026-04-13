@@ -136,6 +136,51 @@ governance:
 Controls who can authorize agent checkout and what
 phrases trigger checkout detection.
 
+### PR Workflow
+
+```yaml
+workflow:
+  max_pr_lines: 1000          # Max lines per PR
+  min_reviewers: 2            # Required approvals
+  privacy_scan: true          # Enable privacy gate
+  privacy_patterns:           # Strings to scan for
+    - "your-company"
+    - "@your-domain"
+  steps:                      # Review sequence
+    - "privacy_scan"
+    - "peer_review"
+    - "open_pr"
+    - "merge"
+  permissions:                # Per-role access
+    coordinator:
+      open_pr: true
+      review: true
+      merge: true
+    builder:
+      open_pr: true
+      review: true
+      merge: true
+```
+
+The default workflow is a 4-step sequence. Add
+custom steps by extending the `steps` list:
+
+```yaml
+# Example: add security review and CI
+workflow:
+  steps:
+    - "privacy_scan"
+    - "security_review"
+    - "peer_review"
+    - "open_pr"
+    - "ci_check"
+    - "merge"
+```
+
+The rules in `.claude/rules/pr-workflow.md` reference
+these config values. Claude Code loads the rules
+automatically when working in the repo.
+
 ### Paths
 
 ```yaml

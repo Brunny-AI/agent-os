@@ -1,0 +1,61 @@
+# Enterprise Workflow -- Multi-layer review pipeline
+#
+# For teams that need:
+# - Security/adversarial review before peer review
+# - Compliance sign-off from coordinator
+# - External CI (GitHub Actions, Gemini, etc.)
+# - Audit trail of review artifacts
+#
+# Copy the workflow section into config/agent-os.yaml.
+
+workflow:
+  max_pr_lines: 1000
+  min_reviewers: 2
+  privacy_scan: true
+  privacy_patterns:
+    - "your-company"
+    - "@your-domain"
+    - "internal-tool"
+  steps:
+    - "privacy_scan"
+    - "security_review"
+    - "peer_review"
+    - "compliance_gate"
+    - "open_pr"
+    - "external_ci"
+    - "merge"
+  custom_steps:
+    security_review:
+      description: >
+        Run adversarial review on the diff. Look for
+        command injection, path traversal, race
+        conditions, and credential leaks. Address all
+        findings before proceeding.
+      required: true
+    compliance_gate:
+      description: >
+        Coordinator reviews for policy compliance:
+        privacy boundary, architecture constraints,
+        and operational impact. Required sign-off.
+      required: true
+      required_role: "coordinator"
+    external_ci:
+      description: >
+        External automated review (GitHub Actions,
+        Gemini Code Assist, or similar). Address
+        feedback and re-request review until clean.
+      required: true
+  permissions:
+    coordinator:
+      open_pr: false
+      review: true
+      compliance_review: true
+      merge: false
+    builder:
+      open_pr: true
+      review: true
+      merge: true
+    reviewer:
+      open_pr: false
+      review: true
+      merge: false
