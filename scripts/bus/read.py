@@ -19,6 +19,7 @@ import argparse
 import datetime
 import fcntl
 import glob
+import itertools
 import json
 import os
 import sys
@@ -193,12 +194,11 @@ def main() -> None:
             current_offset = channel_offsets.get(week, 0)
 
             with open(log_file) as f:
-                # Skip already-read lines without
-                # loading them into memory
-                for _ in range(current_offset):
-                    if next(f, None) is None:
-                        break
-                new_lines = list(f)
+                # Skip already-read lines efficiently
+                # (islice is implemented in C)
+                new_lines = list(
+                    itertools.islice(f, current_offset, None)
+                )
             if not new_lines:
                 continue
 

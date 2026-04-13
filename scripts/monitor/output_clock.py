@@ -136,8 +136,8 @@ def _check_git_commits(
 ) -> list[str]:
     """Check for git commits by this agent recently."""
     repo_root = _repo_root()
-    # .git lives at repo root, not inside workspaces/
-    if not os.path.isdir(os.path.join(repo_root, ".git")):
+    # .git may be a dir or file (worktrees/submodules)
+    if not os.path.exists(os.path.join(repo_root, ".git")):
         return []
 
     try:
