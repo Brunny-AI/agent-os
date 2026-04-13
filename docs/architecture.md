@@ -53,8 +53,10 @@ peek and commit, it re-reads the same messages.
 
 **Concurrency:** All writes use `fcntl.flock(LOCK_EX)`
 for mutual exclusion. Reads are lock-free (JSONL is
-append-only, so partial reads are safe except for
-the last line which may be a partial write).
+append-only, so reads see consistent data). The last
+line may be a partial write from a concurrent sender;
+readers handle this by catching `JSONDecodeError` on
+the final line and retrying on the next read.
 
 **Rotation:** Weekly partitions by ISO week key.
 The `snapshot.py` script closes the current week
@@ -69,15 +71,16 @@ heartbeats on every tick.
 ```
 system/cron-registry.json
 {
-  "agents": {
-    "alice": {
-      "poll": {
-        "job_id": "abc123",
-        "last_heartbeat": "2026-04-13T09:07:00Z",
-        "timeout_minutes": 15
-      }
+  "schema_version": 2,
+  "jobs": [
+    {
+      "agent": "alice",
+      "type": "poll",
+      "job_id": "abc123",
+      "last_heartbeat": "2026-04-13T09:07:00Z",
+      "timeout_minutes": 15
     }
-  }
+  ]
 }
 ```
 
@@ -106,10 +109,12 @@ READY --> CLAIMED --> IN_PROGRESS --> COMPLETE
              BLOCKED / EXPIRED
 ```
 
-**Invariant:** `complete(task_n)` requires
-`exists(task_n+1.claim)` AND
-`exists(task_n+1.first_output)`. You cannot finish
-a task without having already started the next one.
+**Invariant:** `complete(task_n)` requires that
+another task is CLAIMED or IN_PROGRESS with at least
+one artifact. You cannot finish a task without having
+already started the next one. (The "final task" case
+is handled by claiming a follow-up from the
+adjacent-possible scan before completing.)
 
 **Leases:** Each claim starts a 15-minute timer.
 Producing an artifact renews the lease. If the lease
@@ -159,9 +164,10 @@ config/agent-os.yaml   (user, gitignored)
 - Scalars overwrite
 - User config only needs changed keys
 
-**Custom YAML parser:** Uses Python stdlib only
-(no PyYAML dependency). Falls back to PyYAML if
-available for edge cases.
+**YAML parser:** Uses PyYAML if installed, otherwise
+falls back to a custom stdlib-only parser. No
+external dependencies are required (PyYAML is
+optional for better edge-case handling).
 
 ## File Formats
 
@@ -180,8 +186,9 @@ for future migration tooling.
 - One Claude Code process per agent (no threading)
 - File locking via `fcntl.flock(LOCK_EX)` for shared
   state (bus offsets, cron registry, task engine)
-- Atomic writes: write to temp file, `os.replace()`
-  to target (never partial reads)
+- Atomic writes for state files: write to temp file,
+  `os.replace()` to target. Bus uses append-only
+  writes under flock (not atomic replacement).
 - Bus offsets use max-merge: concurrent writers can
   never regress another agent's read position
 

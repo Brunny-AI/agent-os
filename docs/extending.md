@@ -34,9 +34,11 @@ To customize, create your own prompt and reference
 it when creating the cron job:
 
 ```
-CronCreate:
-  cron: "7,12,17,22,27,32,37,42,47,52,57 * * * *"
-  prompt: "<your custom poll prompt>"
+# Claude Code tool call (not a config file):
+CronCreate(
+  cron="7,12,17,22,27,32,37,42,47,52,57 * * * *",
+  prompt="<your custom poll prompt>"
+)
 ```
 
 The poll prompt should include:

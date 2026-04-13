@@ -119,7 +119,8 @@ bus:
 
 Expired messages are filtered out at read time
 (lazy expiration). No messages are ever deleted
-from the log files.
+from the log files. Weekly rotation (`snapshot.py`)
+archives old weeks but does not delete them.
 
 ### Governance
 
