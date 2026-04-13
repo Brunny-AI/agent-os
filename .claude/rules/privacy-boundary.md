@@ -24,7 +24,8 @@
 - Contributors run privacy scan before opening PR:
   ```bash
   grep -rnE "your-company|@your-domain" . \
-    --exclude-dir=.git
+    --exclude-dir=.git \
+    --exclude-dir=scripts/hooks
   ```
 - config/ directory is gitignored (user data)
 - system/ and workspaces/ are gitignored (runtime)

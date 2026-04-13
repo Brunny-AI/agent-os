@@ -14,7 +14,8 @@ email_matches="$(grep -rnE \
   '[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}' \
   . --exclude-dir=.git --exclude-dir=scripts/hooks \
   --include='*.md' --include='*.py' \
-  --include='*.yaml' --include='*.json' \
+  --include='*.sh' --include='*.yaml' \
+  --include='*.json' \
   2>/dev/null \
   | grep -v '@example\.com' \
   | grep -v '@your-domain' \
@@ -46,12 +47,15 @@ fi
 #    Loaded from config if present.
 denylist_file="config/privacy-denylist.txt"
 if [[ -f "${denylist_file}" ]]; then
-  while IFS= read -r term; do
+  while IFS= read -r term || [[ -n "${term}" ]]; do
     [[ -z "${term}" || "${term}" == \#* ]] && continue
     deny_match="$(grep -rn "${term}" \
       . --exclude-dir=.git \
       --exclude-dir=scripts/hooks \
       --exclude='privacy-denylist.txt' \
+      --include='*.md' --include='*.py' \
+      --include='*.sh' --include='*.yaml' \
+      --include='*.json' \
       2>/dev/null || true)"
     if [[ -n "${deny_match}" ]]; then
       echo "ERROR: Denylist term '${term}' found:" >&2

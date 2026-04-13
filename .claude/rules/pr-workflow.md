@@ -30,7 +30,8 @@ No steps may be skipped. (INC-009 fix)
 Run the pre-push hook manually:
 ```bash
 grep -rnE "your-company|@your-domain" . \
-  --exclude-dir=.git
+  --exclude-dir=.git \
+  --exclude-dir=scripts/hooks
 ```
 Fix all matches before proceeding.
 
