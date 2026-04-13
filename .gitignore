@@ -1,1 +1,13 @@
+# Claude Code local state
 .claude/
+!.claude/rules/
+
+# Runtime directories (created by setup.py)
+/system/
+/workspaces/
+
+# User config (private, not shipped)
+/config/
+
+# OS artifacts
+.DS_Store
