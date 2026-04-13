@@ -362,7 +362,8 @@ while true; do
     # Bus notification (best-effort)
     python3 "${WORKDIR}/scripts/bus/send.py" \
       --channel standup --from "${AGENT}" \
-      --body "SHIFT REFRESH: ${AGENT} completed shift ${SHIFT} (${duration}s). Reason: ${REASON}. Restarting." \
+      --body "SHIFT REFRESH: ${AGENT} completed shift \
+${SHIFT} (${duration}s). Reason: ${REASON}. Restarting." \
       --bus "${WORKDIR}/system/bus" 2>/dev/null || true
 
     CLAUDE_PID=""
@@ -385,7 +386,9 @@ while true; do
 
       python3 "${WORKDIR}/scripts/bus/send.py" \
         --channel urgent --from "${AGENT}" \
-        --body "CRASH LOOP: agent_loop.sh for ${AGENT} hit ${rapid_count} rapid exits. Exit code: ${CLAUDE_EXIT}. Manual intervention needed." \
+        --body "CRASH LOOP: agent_loop.sh for ${AGENT} hit \
+${rapid_count} rapid exits. Exit code: ${CLAUDE_EXIT}. \
+Manual intervention needed." \
         --bus "${WORKDIR}/system/bus" 2>/dev/null || true
       exit 1
     fi

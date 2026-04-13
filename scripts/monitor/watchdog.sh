@@ -146,7 +146,9 @@ if [ -f "${RECOVER_SCRIPT}" ]; then
   bash "${RECOVER_SCRIPT}" ${RECOVER_ARGS} 2>&1
 else
   # Fallback: alert only
-  alert_body="WATCHDOG: Expired agent sessions. $(echo "${expired}" | tr '\n' '; '). Restart needed."
+  alert_body="WATCHDOG: Expired agent sessions. "
+  alert_body+="$(echo "${expired}" | tr '\n' '; '). "
+  alert_body+="Restart needed."
   python3 "${BUS_SCRIPTS}/send.py" \
     --channel urgent --from watchdog --to all \
     --body "${alert_body}" \
