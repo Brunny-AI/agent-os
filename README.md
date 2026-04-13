@@ -248,7 +248,7 @@ Key settings:
 | `monitoring.stale_threshold_polls` | 3 | Polls before STALE |
 | `cron.poll_timeout_minutes` | 15 | Heartbeat timeout |
 | `bus.default_ttl_hours` | 168 | Message TTL (1 week) |
-| `autonomous.grace_period_seconds` | 3 | Sidecar kill delay |
+| `autonomous.grace_period_seconds` | 5 | Sidecar kill delay |
 | `autonomous.crash_loop_threshold` | 3 | Rapid exits before stop |
 
 ## License
