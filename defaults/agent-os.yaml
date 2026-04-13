@@ -1,0 +1,71 @@
+# Agent OS Default Configuration
+# Override any value by creating config/agent-os.yaml
+# with only the keys you want to change.
+
+schema_version: 1
+
+# Team definition
+team:
+  name: "my-team"
+  agents:
+    - name: "coordinator"
+      role: "coordinator"
+    - name: "builder-1"
+      role: "builder"
+    - name: "builder-2"
+      role: "builder"
+
+# Governance
+governance:
+  checkout_approver_agent: "coordinator"
+  checkout_approval_window_minutes: 60
+  checkout_keywords:
+    - "checkout"
+    - "check out"
+    - "wrap up"
+    - "shut down"
+    - "good night"
+
+# Shift management
+shifts:
+  duration_hours: 4
+  handoff_sentinel: "--- HANDOFF COMPLETE ---"
+
+# Task engine
+tasks:
+  lease_minutes: 15
+  initiative_interval: 3
+
+# Output clock
+monitoring:
+  default_window_minutes: 60
+  stale_threshold_polls: 3
+  excluded_files:
+    - "bus-offsets.json"
+    - "bus-offsets.json.lock"
+    - "CLAUDE.md"
+    - ".DS_Store"
+  excluded_extensions:
+    - ".pyc"
+    - ".pyo"
+    - ".lock"
+
+# Cron manager
+cron:
+  poll_timeout_minutes: 15
+  meeting_timeout_minutes: 5
+  scheduler_timeout_minutes: 90
+
+# Event bus
+bus:
+  default_ttl_hours: 168
+  snapshot_ttl_hours: 8760
+
+# Paths (relative to AGENT_OS_ROOT)
+paths:
+  bus_root: "system/bus"
+  cron_registry: "system/cron-registry.json"
+  cache_dir: "system/cache"
+  workspaces: "workspaces"
+  defaults: "defaults"
+  config: "config"
