@@ -18,13 +18,17 @@ Key rules:
 - Google naming: `lower_with_under` for functions
   and variables, `CapWords` for classes
 - Type annotations on all public APIs
-- Google-style docstrings with Args/Returns/Raises sections
+  (use `X | None`, no bare `list`/`dict`)
+- Google-style docstrings with Args/Returns/Raises
 - No bare `except:`, no mutable default arguments
+- Use f-strings for formatting
+- Sort imports lexicographically
 
 ### Shell
 - 2-space indentation, 80 char line limit
 - Bash only (`#!/usr/bin/env bash`)
 - Quote all variables: `"${var}"` not `$var`
+- Use `local` for variables, `readonly` for constants
 - Errors to STDERR (`>&2`), always check return values
 - Scripts over 100 lines should be Python instead
 
@@ -60,9 +64,10 @@ All changes go through pull requests. No direct commits to main.
 
 ```bash
 git checkout -b {agent}/{description}
-git -c user.name="{Agent}" \
+git -c user.name="{agent}" \
   -c user.email="{agent}@example.com" \
-  commit -m "message"
+  commit -m "[{agent}] add: description" \
+  -m "Now possible: next step"
 git push -u origin {agent}/{description}
 gh pr create
 ```
