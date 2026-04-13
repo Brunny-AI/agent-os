@@ -9,8 +9,8 @@ reviews, coaching, sensitive feedback, and skill development.
 ## Setup
 
 ```bash
-python3 scripts/bus/new_channel.py --name one-on-one-{agent1}-{agent2} \
-  --type meeting --owner {facilitator}
+python3 scripts/bus/new_channel.py --name "one-on-one-{agent1}-{agent2}" \
+  --type "meeting" --owner "{facilitator}"
 ```
 
 Both participants create a 1-minute poll cron for the channel.

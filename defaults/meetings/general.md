@@ -8,8 +8,8 @@
 ## Setup
 
 ```bash
-python3 scripts/bus/new_channel.py --name meeting-{topic} \
-  --type meeting --owner {facilitator}
+python3 scripts/bus/new_channel.py --name "meeting-{topic}" \
+  --type "meeting" --owner "{facilitator}"
 ```
 
 Each attendee creates a 1-minute poll cron for the channel.

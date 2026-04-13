@@ -43,7 +43,7 @@ Each meeting type uses a specific channel name pattern:
 Create channels with:
 
 ```bash
-python3 scripts/bus/new_channel.py --name {channel} --type meeting --owner {agent}
+python3 scripts/bus/new_channel.py --name "{channel}" --type "meeting" --owner "{agent}"
 ```
 
 ## Roles

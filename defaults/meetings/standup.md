@@ -10,8 +10,8 @@ standup must produce at least one new idea, question, or challenge.
 ## Setup
 
 ```bash
-python3 scripts/bus/new_channel.py --name standup-$(date +%Y-%m-%d-%H%M) \
-  --type meeting --owner {facilitator}
+python3 scripts/bus/new_channel.py --name "standup-$(date +%Y-%m-%d-%H%M)" \
+  --type "meeting" --owner "{facilitator}"
 ```
 
 Each attendee creates a 1-minute poll cron for the channel.
