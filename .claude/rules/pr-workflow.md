@@ -1,111 +1,89 @@
-# PR Workflow — Agent OS Public Repo
+# PR Workflow
 
 ## Scope
-This rule applies to the `agent-os` public GitHub repo (brunny-ai org). It does NOT apply to the internal `workspaces/` repo.
+Applies to the agent-os public repo. Every change
+goes through a pull request. No exceptions.
 
 ## Core Rule
-**No direct commits to main.** Every change goes through a pull request with mandatory code review. No exceptions.
+**No direct commits to main.** Enforced by
+pre-commit hook (`scripts/hooks/pre-commit`).
 
 ## Change Size Limit
-Every PR must be under **1000 lines changed**. If a change exceeds this, split it into smaller PRs that can each be reviewed independently.
+Every PR must be under **1000 lines changed**.
 
-## Privacy Gate (MANDATORY — check BEFORE every PR)
+## Privacy Gate (MANDATORY before every push)
 
-**This is a public repo.** Every file in every PR is visible to the world. Before opening ANY PR, verify:
+This is a public repo. Every file is visible.
+Enforced by pre-push hook (`scripts/hooks/pre-push`).
 
-- **No real names** — use `{agent}`, `{founder}`, role titles only
-- **No email addresses** — use `{agent}@example.com` as placeholder
-- **No SSH paths, token paths, or credential references**
-- **No company-specific tool references** (internal skills, workspace paths, bus channels)
-- **No employer-adjacent content** (names of past/current employers)
+- **No real names** of any person
+- **No email addresses** (use `{agent}@example.com`)
+- **No SSH paths, token paths, or credentials**
+- **No company-specific tool references**
 
-Run this grep before pushing: `grep -rn "brunny\|@brunny\|scout@\|kai@\|dong@\|alex@\|derek@" . --include="*.md" --include="*.py" --include="*.sh" | grep -v .git`
+## Internal Review Sequence
 
-If ANY match is found, fix it before proceeding. No exceptions.
+Every change follows this exact sequence.
+No steps may be skipped. (INC-009 fix)
 
-## Code Review Pipeline
-
-Every change follows this exact sequence. No steps may be skipped.
-
-### Phase 1: Internal Review (before PR is opened)
-
-1. **Privacy scan** (see Privacy Gate above)
-   - Run the grep check
-   - Fix all matches
-   - This is non-negotiable for a public repo
-
-2. **Automated adversarial review**
-   - Run `/codex:adversarial-review` on the diff
-   - Address all findings using `/address-feedback`
-   - Do not proceed until Codex review is clean
-
-3. **Peer review meeting**
-   - Open a 1:1 meeting on the bus with:
-     - One peer reviewer (whoever is NOT the author)
-     - Compliance reviewer (mandatory for all changes)
-   - Use `/meeting-guide` for the review meeting format
-   - Both reviewers must confirm alignment before proceeding
-
-### Phase 2: External Review (after PR is opened)
-
-3. **Open pull request**
-   - Push branch to agent-os repo using agent's SSH key (`github-scout` or `github-kai`)
-   - Create PR with `gh pr create` — include summary of internal review
-   - Use per-commit git identity: `git -c user.name="Scout" -c user.email="scout@brunny.ai"`
-
-4. **Gemini Code Assist review**
-   - Gemini Code Assist (Google's GitHub app) automatically reviews the PR
-   - Address all Gemini feedback using `/address-feedback`
-   - Push fixes to the same branch
-   - After pushing fixes, request re-review by commenting `/gemini review` on the PR
-   - Repeat until Gemini has no remaining issues (review state is clean)
-   - Do NOT merge until Gemini's latest review has zero unresolved comments
-
-5. **Merge**
-   - Only **founder (dong)** or **Scout** may approve and merge
-   - Merge to main only when Gemini's latest review is clean (no unresolved comments)
-   - Internal review wins if it conflicts with Gemini's feedback
-
-## Operational Details
-
-### Git Identity (per-commit, never repo-level)
+### Step 1: Privacy Scan
+Run the pre-push hook manually:
 ```bash
-git -c user.name="Scout" -c user.email="scout@brunny.ai" commit -m "message"
+grep -rnE "your-company|@your-domain" . \
+  --exclude-dir=.git
+```
+Fix all matches before proceeding.
+
+### Step 2: Adversarial Review
+Run `/codex:adversarial-review` on the diff.
+Address all findings using `/address-feedback`.
+Do not proceed until review is clean.
+
+### Step 3: Peer Review (2-agent minimum)
+Open a review meeting on the bus. Require sign-off
+from at least 2 agents (not including the author).
+Record the meeting channel in the PR template.
+
+### Step 4: Open Pull Request
+Push branch and create PR using the template at
+`.github/pull_request_template.md`. All checklist
+items must be filled with artifact links.
+
+### Step 5: External Review
+Gemini Code Assist auto-reviews on GitHub. Address
+feedback, then `/gemini review` to re-check.
+Merge when clean.
+
+## Git Identity (per-commit)
+```bash
+git -c user.name="{agent}" \
+  -c user.email="{agent}@example.com" \
+  commit -m "[{agent}] verb: description"
 ```
 
-### SSH Push
-```bash
-GIT_SSH_COMMAND="ssh -F /Users/brunny-ai-dong-chen/.ssh/config" git push origin branch-name
-```
-
-### GH CLI (always use GH_TOKEN from workspace)
-```bash
-GH_TOKEN=$(cat workspaces/scout/.ssh/gh-token) gh pr create --repo Brunny-AI/agent-os ...
-GH_TOKEN=$(cat workspaces/scout/.ssh/gh-token) gh pr merge N --squash ...
-```
-
-### Request Gemini Re-review After Fixes
-```bash
-GH_TOKEN=$(cat workspaces/scout/.ssh/gh-token) gh pr comment N --body "/gemini review"
-```
-
-### Repo Location
-`projects/agent-os/` (cloned from `github-scout:Brunny-AI/agent-os.git`)
+## Branch Naming
+Use: `{agent}/{description}`
+(e.g., `scout/port-event-bus`)
 
 ## Who Can Do What
 
-| Action | Founder | Scout | Kai | Alex | Derek |
-|--------|---------|-------|-----|------|-------|
-| Open PR | Yes | Yes | Yes | No | No |
-| Review (internal peer) | Yes | Yes | Yes | No | No |
-| Review (compliance) | No | No | No | Yes | No |
-| Approve + merge | Yes | Yes | No | No | No |
+| Action | Founder | Builder | CoS |
+|--------|---------|---------|-----|
+| Open PR | Yes | Yes | No |
+| Peer review | Yes | Yes | Yes |
+| Compliance review | No | No | Yes |
+| Approve + merge | Yes | Yes | No |
 
-## Branch Naming
-Use: `{agent}/{description}` (e.g., `scout/port-event-bus`, `kai/add-quickstart`)
+## Git Hooks (install after clone)
+```bash
+cp scripts/hooks/pre-commit .git/hooks/
+cp scripts/hooks/pre-push .git/hooks/
+chmod +x .git/hooks/pre-commit .git/hooks/pre-push
+```
+
+`setup.py init` installs these automatically.
 
 ## Architecture Constraint
-The agent-os repo must support a **plugin/extension system** from day one. Company-specific configurations, credentials, and content pipelines live in private extensions, not in the core repo. Design every component to be extensible.
-
-## Convergence Plan
-When all OS components are ported and the plugin system works, the internal codebase converges to: `agent-os (public core) + brunny-extension (private)`. The trigger is a milestone decision by the founder.
+The repo must support a plugin/extension system.
+Company-specific config lives in private extensions,
+not in the core repo.

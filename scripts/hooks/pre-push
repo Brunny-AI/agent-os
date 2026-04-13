@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Pre-push hook: scan for private info before pushing.
+# Install: cp scripts/hooks/pre-push .git/hooks/pre-push
+
+set -euo pipefail
+
+echo "Running privacy scan..." >&2
+
+readonly MATCHES
+MATCHES="$(grep -rnE \
+  'brunny|@brunny|airbnb|Airbnb|quantcast|Quantcast|dong@|weiling@|Google.Drive' \
+  . --exclude-dir=.git --include='*.md' --include='*.py' \
+  --include='*.sh' --include='*.yaml' --include='*.json' \
+  2>/dev/null || true)"
+
+if [[ -n "${MATCHES}" ]]; then
+  echo "ERROR: Privacy scan FAILED. Prohibited" >&2
+  echo "terms found:" >&2
+  echo "${MATCHES}" >&2
+  echo "" >&2
+  echo "Fix these before pushing. See" >&2
+  echo ".claude/rules/privacy-boundary.md" >&2
+  exit 1
+fi
+
+echo "Privacy scan passed." >&2
