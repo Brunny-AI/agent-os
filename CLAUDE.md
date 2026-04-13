@@ -44,11 +44,8 @@ Follow `.gemini/styleguide.md` for all code. Key rules:
 ```bash
 # No build step required. Pure Python + Bash.
 
-# Run scoring tests
-python3 skills/signal-feed/scripts/test_scoring.py
-
-# Run output clock
-python3 scripts/output-clock.py --agent example --minutes 30
+# Run tests (when available)
+python3 scripts/test_*.py
 ```
 
 ## Git Workflow
@@ -60,21 +57,19 @@ All changes go through pull requests. No direct commits to main.
 git checkout -b {agent}/{description}
 
 # Commit with agent identity
-git -c user.name="Scout" -c user.email="scout@brunny.ai" commit -m "message"
+git -c user.name="{Agent}" -c user.email="{agent}@example.com" commit -m "message"
 
-# Push
-GIT_SSH_COMMAND="ssh -F ~/.ssh/config" git push -u origin {branch}
-
-# Open PR
-GH_TOKEN=$(cat workspaces/{agent}/.ssh/gh-token) gh pr create
+# Push and open PR
+git push -u origin {branch}
+gh pr create
 ```
 
 ## PR Review Pipeline
 
-1. Internal: `/codex:adversarial-review` + peer review + compliance review
+1. Internal: automated adversarial review + peer review + compliance review
 2. External: Gemini Code Assist auto-reviews on GitHub
 3. Address feedback, then `/gemini review` to re-check
-4. Merge when clean (founder or Scout only)
+4. Merge when clean
 
 ## Architecture Principles
 
