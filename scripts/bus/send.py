@@ -13,16 +13,16 @@ Usage:
 """
 
 import argparse
+import datetime
 import fcntl
 import json
 import os
 import sys
-from datetime import datetime, timezone
 
 
 def week_key() -> str:
     """Return the current ISO week key (e.g. '2026-W15')."""
-    return datetime.now(timezone.utc).strftime("%G-W%V")
+    return datetime.datetime.now(datetime.timezone.utc).strftime("%G-W%V")
 
 
 def main() -> None:
@@ -66,7 +66,7 @@ def main() -> None:
         )
         sys.exit(1)
 
-    now = datetime.now(timezone.utc)
+    now = datetime.datetime.now(datetime.timezone.utc)
     timestamp = now.strftime("%Y%m%dT%H%M%S%f") + "Z"
     msg_id = f"{args.sender}_{timestamp}"
 

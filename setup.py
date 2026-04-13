@@ -15,19 +15,19 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import datetime
 import json
 import os
+import re
 import shutil
 import sys
-from datetime import datetime, timezone
 
 # Import config loader from the same repo
 sys.path.insert(
     0, os.path.join(os.path.dirname(__file__))
 )
-import re
 
-from scripts.config.loader import load_config, get_value
+from scripts.config import loader as config_loader
 
 _SAFE_NAME_RE = re.compile(r"^[a-zA-Z0-9_-]+$")
 
@@ -71,13 +71,13 @@ def _validate_name(name: str) -> None:
 
 def _now_iso() -> str:
     """Return current UTC time as ISO 8601 string."""
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.datetime.now(datetime.timezone.utc).isoformat()
 
 
 def cmd_init(args: argparse.Namespace) -> None:
     """Initialize Agent OS environment."""
     root = _repo_root()
-    config = load_config(root)
+    config = config_loader.load_config(root)
     dry_run = args.dry_run
 
     print("Agent OS Setup")
@@ -210,7 +210,7 @@ def cmd_init(args: argparse.Namespace) -> None:
             print(f"   [would create] {ch_name}")
         else:
             os.makedirs(ch_dir, exist_ok=True)
-            week = datetime.now(timezone.utc).strftime(
+            week = datetime.datetime.now(datetime.timezone.utc).strftime(
                 "%G-W%V"
             )
             manifest = {
@@ -219,7 +219,7 @@ def cmd_init(args: argparse.Namespace) -> None:
                 "type": "async",
                 "owner": "system",
                 "required_attendees": ["all"],
-                "created": datetime.now(timezone.utc)
+                "created": datetime.datetime.now(datetime.timezone.utc)
                 .strftime("%Y-%m-%d"),
                 "description": f"Default {ch_name} channel",
             }
@@ -354,7 +354,7 @@ def cmd_init(args: argparse.Namespace) -> None:
 def cmd_validate(args: argparse.Namespace) -> None:
     """Validate the current setup."""
     root = _repo_root()
-    config = load_config(root)
+    config = config_loader.load_config(root)
     errors: list[str] = []
     warnings: list[str] = []
 
@@ -431,7 +431,7 @@ def cmd_validate(args: argparse.Namespace) -> None:
 def cmd_status(args: argparse.Namespace) -> None:
     """Show current Agent OS status."""
     root = _repo_root()
-    config = load_config(root)
+    config = config_loader.load_config(root)
     paths = config.get("paths", {})
     team = config.get("team", {})
     agents = team.get("agents", [])

@@ -14,13 +14,15 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import datetime
 import fcntl
 import json
 import os
-from datetime import datetime, timedelta, timezone
 
 
-def week_key(dt: datetime | None = None) -> str:
+def week_key(
+    dt: datetime.datetime | None = None,
+) -> str:
     """Return the ISO week key for a given datetime.
 
     Args:
@@ -31,14 +33,14 @@ def week_key(dt: datetime | None = None) -> str:
         ISO week string like '2026-W15'.
     """
     if dt is None:
-        dt = datetime.now(timezone.utc)
+        dt = datetime.datetime.now(datetime.timezone.utc)
     return dt.strftime("%G-W%V")
 
 
 def next_week_key() -> str:
     """Return the ISO week key for next week."""
-    now = datetime.now(timezone.utc)
-    return week_key(now + timedelta(weeks=1))
+    now = datetime.datetime.now(datetime.timezone.utc)
+    return week_key(now + datetime.timedelta(weeks=1))
 
 
 def main() -> None:
@@ -63,7 +65,7 @@ def main() -> None:
     channels_dir = os.path.join(args.bus, "channels")
     current_week = week_key()
     nxt_week = next_week_key()
-    now = datetime.now(timezone.utc)
+    now = datetime.datetime.now(datetime.timezone.utc)
 
     print(
         f"Closing week {current_week}, "

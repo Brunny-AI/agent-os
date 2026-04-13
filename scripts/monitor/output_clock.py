@@ -20,13 +20,13 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import datetime
 import json
 import os
 import re
 import subprocess
 import sys
 import time
-from datetime import datetime, timezone
 
 _AGENT_RE = re.compile(r"^[a-zA-Z0-9_-]+$")
 
@@ -135,17 +135,15 @@ def _check_git_commits(
     agent: str, minutes: int
 ) -> list[str]:
     """Check for git commits by this agent recently."""
-    workspaces_dir = os.path.join(
-        _repo_root(), "workspaces"
-    )
-    git_dir = os.path.join(workspaces_dir, ".git")
-    if not os.path.isdir(git_dir):
+    repo_root = _repo_root()
+    # .git lives at repo root, not inside workspaces/
+    if not os.path.isdir(os.path.join(repo_root, ".git")):
         return []
 
     try:
         result = subprocess.run(
             [
-                "git", "-C", workspaces_dir, "log",
+                "git", "-C", repo_root, "log",
                 f"--since={minutes} minutes ago",
                 f"--grep=\\[{re.escape(agent)}\\]",
                 "--oneline",
@@ -195,8 +193,8 @@ def _scan_workspace(
                     rel = os.path.relpath(fpath, root)
                     modified_files.append({
                         "path": rel,
-                        "modified": datetime.fromtimestamp(
-                            mtime, tz=timezone.utc
+                        "modified": datetime.datetime.fromtimestamp(
+                            mtime, tz=datetime.timezone.utc
                         ).isoformat(),
                         "minutes_ago": round(
                             (time.time() - mtime) / 60, 1
