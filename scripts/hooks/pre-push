@@ -6,6 +6,8 @@ set -euo pipefail
 
 echo "Running privacy scan..." >&2
 
+readonly PRIVACY_DENYLIST="config/privacy-denylist.txt"
+
 local_fail=0
 
 # 1. Generic email detector (catches real addresses,
@@ -18,7 +20,6 @@ email_matches="$(grep -rnE \
   --include='*.json' \
   2>/dev/null \
   | grep -v '@example\.com' \
-  | grep -v '@your-domain' \
   | grep -v 'placeholder' \
   || true)"
 
@@ -45,14 +46,13 @@ fi
 
 # 3. Project-specific denylist (extend as needed).
 #    Loaded from config if present.
-denylist_file="config/privacy-denylist.txt"
-if [[ -f "${denylist_file}" ]]; then
-  while IFS= read -r term || [[ -n "${term}" ]]; do
+if [[ -f "${PRIVACY_DENYLIST}" ]]; then
+  while read -r term || [[ -n "${term}" ]]; do
     [[ -z "${term}" || "${term}" == \#* ]] && continue
-    deny_match="$(grep -rn "${term}" \
+    deny_match="$(grep -rn -- "${term}" \
       . --exclude-dir=.git \
       --exclude-dir=scripts/hooks \
-      --exclude='privacy-denylist.txt' \
+      --exclude="$(basename "${PRIVACY_DENYLIST}")" \
       --include='*.md' --include='*.py' \
       --include='*.sh' --include='*.yaml' \
       --include='*.json' \
@@ -62,7 +62,7 @@ if [[ -f "${denylist_file}" ]]; then
       echo "${deny_match}" >&2
       local_fail=1
     fi
-  done < "${denylist_file}"
+  done < "${PRIVACY_DENYLIST}"
 fi
 
 if [[ "${local_fail}" -eq 1 ]]; then
