@@ -6,12 +6,14 @@ weekends. You want an agent that maintains continuity
 between sessions, picks up where you left off, and
 flags when it's been drifting.
 
-This recipe scales Agent OS to a single agent. The
+This recipe scales Agent OS to a single agent. Most
 team-coordination components (meeting quorum, mutual-
-unblock reviews) naturally become no-ops because they
-need multiple agents; the per-agent discipline (task
-engine, output clock, shift refresh, active-task gate)
-still applies.
+unblock reviews, peer review) naturally become no-ops
+because they need multiple agents; two small overrides
+below keep checkout approval and the PR-workflow gate
+pointed at the sole agent. The per-agent discipline
+(task engine, output clock, shift refresh, active-task
+gate) still applies exactly the same way.
 
 ## Team shape
 
