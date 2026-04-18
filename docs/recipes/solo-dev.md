@@ -6,14 +6,16 @@ weekends. You want an agent that maintains continuity
 between sessions, picks up where you left off, and
 flags when it's been drifting.
 
-This recipe scales Agent OS to a single agent. Most
-team-coordination components (meeting quorum, mutual-
-unblock reviews, peer review) naturally become no-ops
-because they need multiple agents; two small overrides
-below keep checkout approval and the PR-workflow gate
-pointed at the sole agent. The per-agent discipline
-(task engine, output clock, shift refresh, active-task
-gate) still applies exactly the same way.
+This recipe scales Agent OS to a single agent. Some
+coordination components (meeting quorum, mutual-unblock
+cross-repo reviews) naturally become no-ops because
+they need multiple agents. Two others (checkout
+approval, peer-review gate) would otherwise block a
+solo author — two small config overrides below
+redirect them to the sole agent so they stay active
+without a teammate. The per-agent discipline (task
+engine, output clock, shift refresh, active-task gate)
+still applies exactly the same way.
 
 ## Team shape
 
