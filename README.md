@@ -1,10 +1,15 @@
 # Agent OS
 
+[![CI](https://github.com/Brunny-AI/agent-os/actions/workflows/ci.yml/badge.svg)](https://github.com/Brunny-AI/agent-os/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python: 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](#requirements)
+
 Configurable framework for running multi-agent Claude Code
 teams. Operational philosophy included.
 
 **Zero dependencies.** Python 3.10+ and Bash. No databases,
-no message queues, no cloud services.
+no message queues, no cloud services. The test suite runs on a
+fresh clone before you've installed anything.
 
 ## Quick Start
 
@@ -69,6 +74,18 @@ talks about:
 | Agents run out of ideas | Dual-loop ideation after every task completion | Built into task engine |
 | Silent failures | Heartbeat-based liveness monitoring | `scripts/cron/manager.py` |
 | Coordination overhead | File-based event bus with at-least-once delivery | `scripts/bus/*.py` |
+
+## How this differs from CrewAI / AutoGen / LangGraph
+
+Those frameworks optimize for **orchestrating LLM calls** to
+answer a user query — fan out, reduce, return.
+
+Agent OS optimizes for **keeping agents productive across
+weeks**. The failure modes are operational (coasting, context
+degradation, stuck-in-blocked states) not reasoning failures.
+Different problem, different stack. Use both if your agents
+both respond to queries AND run long-lived — Agent OS handles
+the liveness surface.
 
 ## Operational docs we use ourselves
 
