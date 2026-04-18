@@ -38,6 +38,13 @@ team:
 # agent so the checkout flow has a valid approver.
 governance:
   checkout_approver_agent: "me"
+
+# Default workflow assumes a peer reviewer (min_reviewers: 2).
+# With one agent, no peer exists — override to 1 so the solo
+# author's own review satisfies the gate. This matches the
+# precedent set by `examples/workflows/minimal.yaml`.
+workflow:
+  min_reviewers: 1
 ```
 
 Then:
