@@ -32,7 +32,6 @@ import argparse
 import datetime
 import fcntl
 import json
-import os
 import pathlib
 import sys
 from typing import Any
@@ -251,16 +250,20 @@ def _append_log(
         fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
         try:
             handle.write(json.dumps(entry) + "\n")
-            # Flush Python buffer + sync to disk BEFORE
-            # releasing the lock. Without this, another
-            # process can acquire the lock, write, and exit
-            # while our bytes are still in the Python buffer
-            # — the final flush on file close then appends
-            # after their write, inverting order. flock
-            # serializes kernel writes only, not buffered
-            # writes.
+            # Flush Python buffer BEFORE releasing the lock
+            # so the kernel receives all our bytes before
+            # another process acquires the lock. fcntl.flock
+            # serializes kernel writes, not Python's buffered
+            # writes — without flush the lock release could
+            # happen while bytes sit in the Python buffer,
+            # inverting write order with another process.
+            #
+            # We do NOT fsync — disk durability is overkill
+            # for an audit log, and 4 agents polling every
+            # 1-5 min would fsync ~240/hour. JSONL line-
+            # atomicity via single write() under the lock is
+            # the actual correctness requirement.
             handle.flush()
-            os.fsync(handle.fileno())
         finally:
             fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
 

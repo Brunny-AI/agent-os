@@ -17,7 +17,9 @@ Usage:
       --log-file system/gate-audit.jsonl --days 7 \\
       --json  # machine-readable
 
-Exit: 0 on success, 1 on read/parse errors.
+Exit: 0 on success even with corrupt lines (warned to
+stderr + skipped, counts remain trusted). 1 only if the
+log file itself cannot be opened.
 """
 
 from __future__ import annotations

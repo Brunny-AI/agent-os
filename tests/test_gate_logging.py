@@ -313,6 +313,37 @@ class GateAuditWindowTest(unittest.TestCase):
         )
         self.log = os.path.join(self.tmp, "audit.jsonl")
 
+    def test_corrupt_lines_warn_but_still_exit_zero(
+        self,
+    ) -> None:
+        """Corrupt JSONL lines warn to stderr, but the audit
+        run still exits 0 — docstring now reflects that disk-
+        unreadable is the only exit-1 path. Clean counts
+        preserved from the parseable lines.
+        """
+        with open(self.log, "w", encoding="utf-8") as handle:
+            handle.write(json.dumps({
+                "ts": _now_iso(), "agent": "alice",
+                "token": "OK",
+                "freshest_task": "T-1",
+                "freshest_age_min": 1.0,
+                "in_progress_count": 1,
+                "blocked_count": 0,
+            }) + "\n")
+            handle.write("this is not json\n")
+            handle.write("{not parseable\n")
+        proc = subprocess.run(
+            [sys.executable,
+             os.path.join(_REPO, "scripts", "monitor",
+                          "gate_audit.py"),
+             "--log-file", self.log,
+             "--days", "1"],
+            capture_output=True, text=True, check=False,
+        )
+        self.assertEqual(proc.returncode, 0)
+        self.assertIn("2 malformed JSONL", proc.stderr)
+        self.assertIn("Total invocations: 1", proc.stdout)
+
     def test_mixed_tz_suffix_window_bounds(self) -> None:
         """Entry with `+00:00` suffix should not be
         ordered before an earlier `Z`-suffixed entry
