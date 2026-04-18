@@ -1,13 +1,13 @@
 ## Summary
 <!-- 1-3 bullet points describing what changed -->
 
-## Internal Review Checklist
+## Internal Review Checklist (pre-push)
 
 All items MUST be completed before opening this PR.
 Replace [ ] with [x] and fill in artifact links.
 
 ### Privacy Scan
-- [ ] Ran `grep -rnE` privacy scan (0 matches)
+- [ ] Ran `bash scripts/hooks/pre-push` (passed)
 - [ ] No real names, emails, credentials, or
       company-specific paths in any changed file
 
@@ -15,16 +15,51 @@ Replace [ ] with [x] and fill in artifact links.
 - [ ] Ran `/codex:adversarial-review` on the diff
 - Review output: <!-- paste link or summary -->
 
-### Peer Review
-- [ ] Opened peer review meeting on bus
-- Channel: <!-- e.g., meeting-review-{branch-name} -->
-- [ ] At least 2 agents signed off
+### Peer Review (2 bus sign-offs)
+- [ ] Branch pushed to origin before requesting review
+      (show-bytes rule: reviewer must see actual bytes,
+      not a verification claim)
+- [ ] Opened peer review on bus
+- Channel: <!-- e.g., review-{branch-name} -->
+- [ ] Sign-off 1: <!-- agent + bus message link -->
+- [ ] Sign-off 2: <!-- agent + bus message link -->
 
-### Compliance
+### Compliance (if touching shared infra)
 - [ ] Alex (CoS) reviewed for compliance issues
 - Sign-off: <!-- Alex's bus message link or "N/A" -->
 
+## Auto-Merge (post-open)
+
+- [ ] Enabled auto-merge via
+      `gh pr merge $N --auto --squash --delete-branch`
+      (fires automatically when Code Owner APPROVE + all
+      required checks clear)
+
+## Post-Open Gates (Gemini + Step 6)
+
+These happen AFTER the PR is open. Auto-merge waits on them.
+
+### Step 5: Gemini auto-review
+- GitHub triggers automatically on PR open / new push.
+- If silent for >2 min post-push: comment `/gemini review` to nudge.
+- Author addresses every finding (fix commit OR reply with reasoning).
+- No "Gemini unresponsive" dismissals.
+
+### Step 6: Code Owner verification (mandatory)
+- Non-author Code Owner reviews the diff and Gemini feedback.
+- Verifies Gemini's findings were addressed at class level (not
+  just line-item silenced).
+- Posts APPROVE on GitHub (required by branch protection).
+- Routing:
+  - Scout author → Kai verifies
+  - Kai author → Scout verifies
+  - Founder/Alex author → Scout or Kai verifies
+
 ## Test Plan
-- [ ] Privacy scan passes (pre-push hook)
-- [ ] No direct commits to main (pre-commit hook)
-- [ ] Changed files stay within 80-char line limit
+- [ ] `bash scripts/hooks/pre-push` passes (privacy)
+- [ ] Line-length within repo limits (Python/Shell/YAML: 80 chars)
+- [ ] If touching shell: `bash -n <file>` passes
+- [ ] If touching Python: `python3 -c 'import ast; ast.parse(...)'` passes
+- [ ] If touching config: `python3 -c "import yaml; yaml.safe_load(...)"` passes
+- [ ] CI workflow checks (post-open): Privacy scan, Shellcheck,
+      PR size, Unit tests, CodeQL Analyze (python + actions)
