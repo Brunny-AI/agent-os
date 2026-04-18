@@ -30,7 +30,8 @@ if [[ ! "${AGENT}" =~ ^[a-zA-Z0-9_-]+$ ]]; then
 fi
 
 readonly FLAG="${WORKDIR}/system/shift-refresh-${AGENT}"
-readonly HANDOFF="${WORKDIR}/workspaces/${AGENT}/logs/progress/session-handoff.md"
+readonly HANDOFF="${WORKDIR}/workspaces/${AGENT}\
+/logs/progress/session-handoff.md"
 readonly SENTINEL="--- HANDOFF COMPLETE ---"
 readonly SHIFT_STATE="${WORKDIR}/system/shift-state-${AGENT}.json"
 
@@ -82,9 +83,13 @@ with os.fdopen(fd, 'w') as f:
 os.replace(tmp, state_path)
 " "${AGENT}" "${shift_num}" "${REASON}" "${HANDOFF}" "${SHIFT_STATE}"
 
-# Atomic flag write
-readonly FLAG_DIR=$(dirname "${FLAG}")
-readonly FLAG_TMP=$(mktemp "${FLAG_DIR}/shift-refresh-XXXXXX.tmp")
+# Atomic flag write.
+# Declare + assign separately (SC2155): `readonly X=$(cmd)`
+# masks the command's exit code.
+FLAG_DIR="$(dirname "${FLAG}")"
+readonly FLAG_DIR
+FLAG_TMP="$(mktemp "${FLAG_DIR}/shift-refresh-XXXXXX.tmp")"
+readonly FLAG_TMP
 echo "${REASON}" > "${FLAG_TMP}"
 mv "${FLAG_TMP}" "${FLAG}"
 

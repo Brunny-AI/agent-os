@@ -6,6 +6,13 @@ on:
   push:
     branches: [main]
 
+# Workflow-level default: all jobs get read-only repo access.
+# No job in this workflow writes to the repo, creates releases,
+# or touches security events. Addresses the github-advanced-security
+# "Workflow does not contain permissions" finding.
+permissions:
+  contents: read
+
 jobs:
   privacy:
     name: Privacy scan

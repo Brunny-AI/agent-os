@@ -117,7 +117,7 @@ PYEOF
   log "INFO" "${event}: ${detail}"
 }
 
-cd "${WORKDIR}"
+cd "${WORKDIR}" || exit 1
 
 # --- Singleton Lock ---
 # Prevent two wrappers for the same agent from running
