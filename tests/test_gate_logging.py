@@ -253,6 +253,114 @@ class GateLoggingTest(unittest.TestCase):
             entry = json.loads(line)
             self.assertEqual(entry["token"], "OK")
 
+    def test_empty_stdin_path_is_logged(self) -> None:
+        """Regression: empty-stdin used to exit before the
+        logging hook, making those gate fires invisible to
+        gate_audit. Now the emit helper logs all exit paths.
+        """
+        proc = subprocess.run(
+            [sys.executable, _GATE,
+             "--log-file", self.log],
+            input="",
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(proc.stdout.strip(),
+                         "ACTIVE-TASK-REQUIRED")
+        self.assertEqual(proc.returncode, 1)
+        with open(self.log, encoding="utf-8") as handle:
+            entry = json.loads(handle.read().strip())
+        self.assertEqual(entry["token"],
+                         "ACTIVE-TASK-REQUIRED")
+        self.assertEqual(entry["agent"], "unknown")
+        self.assertIn("empty engine state", entry["detail"])
+
+    def test_json_parse_fail_path_is_logged(self) -> None:
+        """Regression: malformed JSON on stdin used to exit
+        before logging. Now recorded as STALE-ARTIFACT with
+        the parse error in detail.
+        """
+        proc = subprocess.run(
+            [sys.executable, _GATE,
+             "--log-file", self.log],
+            input="this is not json",
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(proc.stdout.strip(),
+                         "STALE-ARTIFACT")
+        self.assertEqual(proc.returncode, 1)
+        with open(self.log, encoding="utf-8") as handle:
+            entry = json.loads(handle.read().strip())
+        self.assertEqual(entry["token"], "STALE-ARTIFACT")
+        self.assertEqual(entry["agent"], "unknown")
+        self.assertIn("engine JSON parse failed",
+                      entry["detail"])
+
+
+class GateAuditWindowTest(unittest.TestCase):
+    """gate_audit.py parses ISO timestamps before computing
+    min/max for the summary window. Raw string comparison
+    would misorder mixed `Z` and `+00:00` suffixes.
+    """
+
+    def setUp(self) -> None:
+        self.tmp = tempfile.mkdtemp()
+        self.addCleanup(
+            shutil.rmtree, self.tmp, ignore_errors=True
+        )
+        self.log = os.path.join(self.tmp, "audit.jsonl")
+
+    def test_mixed_tz_suffix_window_bounds(self) -> None:
+        """Entry with `+00:00` suffix should not be
+        ordered before an earlier `Z`-suffixed entry
+        purely because `+` < `Z` in ASCII.
+        """
+        earlier_z = "2026-04-18T01:00:00Z"
+        later_offset = "2026-04-18T02:00:00+00:00"
+        with open(self.log, "w", encoding="utf-8") as handle:
+            handle.write(json.dumps({
+                "ts": earlier_z, "agent": "alice",
+                "token": "OK",
+                "freshest_task": "T-1",
+                "freshest_age_min": 1.0,
+                "in_progress_count": 1,
+                "blocked_count": 0,
+            }) + "\n")
+            handle.write(json.dumps({
+                "ts": later_offset, "agent": "alice",
+                "token": "OK",
+                "freshest_task": "T-1",
+                "freshest_age_min": 1.0,
+                "in_progress_count": 1,
+                "blocked_count": 0,
+            }) + "\n")
+        proc = subprocess.run(
+            [sys.executable,
+             os.path.join(_REPO, "scripts", "monitor",
+                          "gate_audit.py"),
+             "--log-file", self.log,
+             "--days", "365", "--json"],
+            capture_output=True, text=True, check=False,
+        )
+        self.assertEqual(proc.returncode, 0)
+        summary = json.loads(proc.stdout)
+        # window_start is the earlier entry (01:00Z),
+        # window_end the later (02:00+00:00). Not sorted
+        # by raw string order.
+        self.assertTrue(
+            summary["window_start"].startswith(
+                "2026-04-18T01:00:00"
+            )
+        )
+        self.assertTrue(
+            summary["window_end"].startswith(
+                "2026-04-18T02:00:00"
+            )
+        )
+
 
 class GateAuditTest(unittest.TestCase):
     """gate_audit.py reads JSONL from the gate, emits summary."""

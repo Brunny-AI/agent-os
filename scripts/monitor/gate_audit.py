@@ -61,13 +61,18 @@ def _summarize(
         str, collections.Counter
     ] = collections.defaultdict(collections.Counter)
     stale_events: list[dict[str, typing.Any]] = []
-    tss: list[str] = []
+    # Track parsed datetimes for window bounds — raw string
+    # min/max would misorder "Z" vs "+00:00" suffixes and any
+    # timezone drift in the logged entries.
+    parsed_tss: list[datetime.datetime] = []
     for entry in entries:
         token = entry.get("token", "UNKNOWN")
         agent = entry.get("agent", "unknown")
         by_token[token] += 1
         by_agent[agent][token] += 1
-        tss.append(entry.get("ts", ""))
+        parsed = _parse_iso(entry.get("ts", ""))
+        if parsed is not None:
+            parsed_tss.append(parsed)
         if token == "STALE-ARTIFACT":
             stale_events.append({
                 "ts": entry.get("ts"),
@@ -75,6 +80,14 @@ def _summarize(
                 "task": entry.get("freshest_task"),
                 "age_min": entry.get("freshest_age_min"),
             })
+    window_start = (
+        min(parsed_tss).isoformat().replace("+00:00", "Z")
+        if parsed_tss else None
+    )
+    window_end = (
+        max(parsed_tss).isoformat().replace("+00:00", "Z")
+        if parsed_tss else None
+    )
     return {
         "total": sum(by_token.values()),
         "by_token": dict(by_token),
@@ -83,8 +96,8 @@ def _summarize(
             for agent, counts in sorted(by_agent.items())
         },
         "stale_events": stale_events[-20:],
-        "window_start": min(tss) if tss else None,
-        "window_end": max(tss) if tss else None,
+        "window_start": window_start,
+        "window_end": window_end,
     }
 
 

@@ -287,55 +287,73 @@ def main() -> None:
     )
     args = parser.parse_args()
 
+    now = datetime.datetime.now(datetime.timezone.utc)
+    empty_context: dict[str, Any] = {
+        "freshest_task": None,
+        "freshest_age_min": None,
+        "in_progress_count": None,
+        "blocked_count": None,
+        "oldest_block_age_min": None,
+    }
+
+    def _emit(
+        token: str,
+        detail: str,
+        context: dict[str, Any],
+        agent: str,
+    ) -> None:
+        """Log (if enabled), print token, print detail to
+        stderr. Centralized so every non-OK exit path records
+        its gate-fire — previously the empty-stdin and JSON-
+        parse-fail paths returned before the logging hook,
+        making their fire counts invisible to gate_audit.
+        """
+        if args.log_file:
+            try:
+                _append_log(
+                    args.log_file, agent, token, detail,
+                    context, args.max_age_min,
+                    args.blocked_grace_min, now,
+                )
+            except OSError as exc:
+                print(
+                    f"gate audit log write failed: {exc}",
+                    file=sys.stderr,
+                )
+        print(token)
+        print(detail, file=sys.stderr)
+
     raw = sys.stdin.read()
     if not raw.strip():
-        print("ACTIVE-TASK-REQUIRED")
-        print(
-            "empty engine state on stdin", file=sys.stderr
+        _emit(
+            "ACTIVE-TASK-REQUIRED",
+            "empty engine state on stdin",
+            empty_context,
+            "unknown",
         )
         sys.exit(1)
 
     try:
         state = json.loads(raw)
     except json.JSONDecodeError as exc:
-        print("STALE-ARTIFACT")
-        print(
+        _emit(
+            "STALE-ARTIFACT",
             f"engine JSON parse failed: {exc}",
-            file=sys.stderr,
+            empty_context,
+            "unknown",
         )
         sys.exit(1)
 
-    now = datetime.datetime.now(datetime.timezone.utc)
     token, detail, context = _evaluate(
         state,
         args.max_age_min,
         args.blocked_grace_min,
         now,
     )
-    if args.log_file:
-        # Fail-open: audit log write failure must never
-        # block the gate decision. Callers shell-out to this
-        # script and read stdout for the token; if we raise
-        # before print(), the poll prompt's `case` statement
-        # sees empty input and behavior is undefined.
-        try:
-            _append_log(
-                args.log_file,
-                state.get("agent", "unknown"),
-                token,
-                detail,
-                context,
-                args.max_age_min,
-                args.blocked_grace_min,
-                now,
-            )
-        except OSError as exc:
-            print(
-                f"gate audit log write failed: {exc}",
-                file=sys.stderr,
-            )
-    print(token)
-    print(detail, file=sys.stderr)
+    _emit(
+        token, detail, context,
+        state.get("agent", "unknown"),
+    )
     sys.exit(0 if token == "OK" else 1)
 
 
