@@ -20,10 +20,14 @@ An agent that runs a polling loop every 5 minutes will print heartbeats forever.
 
 **Minimum viable version for your project:**
 ```bash
-# Flag if agent has been running but committed nothing in the last 30 min
-cd {repo}
-if [ -z "$(git log --author={agent} --since='30 minutes ago' --format=oneline)" ]; then
-    echo "COAST ALERT: {agent} has produced no commits in 30 min"
+# Flag if agent has been running but committed nothing
+# in the last 30 min. Uses 2-space indent and stderr per
+# style guide (rules 55, 76).
+cd "{repo}"
+recent="$(git log --author="{agent}" \
+  --since='30 minutes ago' --format=oneline)"
+if [ -z "${recent}" ]; then
+  echo "COAST ALERT: {agent} no commits in 30 min" >&2
 fi
 ```
 
@@ -53,8 +57,13 @@ When an agent misbehaves, you need to stop it without stopping your own shell. T
 **Our kill sequence:**
 1. `cron-manager.sh checkout {agent}` — agent-level stop. Unregisters cron, acknowledges on bus.
 2. Revoke the agent's API keys (LLM provider + GitHub PAT + any vendor).
-3. Kill any background processes that named the agent (`pgrep -f {agent}` → `kill`).
-4. Optionally: git-revert any commits tagged `[{agent}]` since a known-good SHA if the work was destructive.
+3. Kill any background processes that named the agent. Use a specific match string (full script path, not a generic word) and pipe PIDs to `kill` explicitly:
+   ```bash
+   pgrep -f "scripts/cron/agent_loop.sh.*{agent}" \
+     | xargs -r kill
+   ```
+   Avoid `pkill -f {agent}` if `{agent}` is a generic word (e.g., `agent`, `bot`) — it can match unrelated processes including your editor.
+4. Optionally: `git revert` any commits tagged `[{agent}]` since a known-good SHA if the work was destructive.
 
 **What to prepare in advance:**
 - A written "kill order" playbook (this doc counts). If you have to improvise at 3am, you'll miss a step.
@@ -129,7 +138,7 @@ Before leaving an agent running overnight:
 | 2 | Runaway cost guard active | Provider-level monthly spend cap set |
 | 3 | Kill switch rehearsed | You have run `cron-manager.sh checkout {agent}` at least once |
 | 4 | Incident log template exists | `workspaces/{agent}/logs/incidents-YYYY-MM.md` file is present |
-| 5 | Bus channel cleanup | `ls channels/ \| wc -l` < 30 |
+| 5 | Bus channel cleanup | `[ "$(ls channels/ \| wc -l)" -lt 30 ]` returns true |
 | 6 | Spend log fresh this week | Compliance-log §5 has a receipt row for every active subscription |
 
 If any of the 6 are "no," fix that before scaling to multi-agent operation. The upside of agents is compounding; the downside is also compounding.
