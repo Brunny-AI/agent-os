@@ -32,6 +32,7 @@ import argparse
 import datetime
 import json
 import sys
+from typing import Any
 
 
 def _parse_iso(ts: str | None) -> datetime.datetime | None:
@@ -61,7 +62,7 @@ def _age_min(
     return (now - parsed).total_seconds() / 60.0
 
 
-def _last_artifact_ts(task: dict) -> str | None:
+def _last_artifact_ts(task: dict[str, Any]) -> str | None:
     """Return most recent artifact timestamp, or None."""
     artifacts = task.get("artifacts") or []
     if not artifacts:
@@ -70,15 +71,33 @@ def _last_artifact_ts(task: dict) -> str | None:
 
 
 def _evaluate(
-    state: dict,
+    state: dict[str, Any],
     max_age_min: float,
     blocked_grace_min: float,
     now: datetime.datetime,
 ) -> tuple[str, str]:
-    """Return (token, detail) for the current state.
+    """Compute the gate token from a task-engine state snapshot.
 
-    Token is one of: OK, ACTIVE-TASK-REQUIRED,
-    STALE-ARTIFACT, PARALLEL-TASK-REQUIRED.
+    Args:
+        state: Output of `task/engine.py --json-status` parsed
+            into a dict. Must have `tasks` keyed by task ID with
+            per-task `state` ("IN_PROGRESS"/"BLOCKED"/etc),
+            `claimed_at`, `blocked_at`, and `artifacts` (each
+            with `timestamp`).
+        max_age_min: Stale-artifact threshold. An IN_PROGRESS
+            task whose freshest artifact is older than this
+            triggers STALE-ARTIFACT.
+        blocked_grace_min: Solo-with-blocked grace period.
+            Triggers PARALLEL-TASK-REQUIRED past this.
+        now: Wall-clock anchor. Caller passes datetime.now() so
+            tests can pin time without monkey-patching.
+
+    Returns:
+        Tuple `(token, detail)`. Token is one of OK,
+        ACTIVE-TASK-REQUIRED, STALE-ARTIFACT, or
+        PARALLEL-TASK-REQUIRED. Detail is a human-readable
+        sentence sent to stderr by the caller (never to stdout
+        — the prompt's `case` statement reads stdout only).
     """
     tasks = state.get("tasks") or {}
     in_progress = {

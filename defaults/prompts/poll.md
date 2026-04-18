@@ -27,10 +27,10 @@ Working dir: {root}.
    If expired: claim a new task immediately.
 
 3a. Active-task + parallel-work gate (HARD BLOCK on heartbeat).
-    gate=$(python3 scripts/task/engine.py --agent {agent} \
+    gate="$(python3 scripts/task/engine.py --agent {agent} \
       --json-status \
       | python3 scripts/cron/poll_gates.py \
-      --max-age-min 15 --blocked-grace-min 15)
+      --max-age-min 15 --blocked-grace-min 15)"
     case "$gate" in
       OK) ;;  # Active task with artifact <15min — proceed
       ACTIVE-TASK-REQUIRED|STALE-ARTIFACT)
