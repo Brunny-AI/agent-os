@@ -18,6 +18,7 @@ Usage:
     python scripts/task/engine.py --agent alice --complete T-001
     python scripts/task/engine.py --agent alice --status
     python scripts/task/engine.py --agent alice --check-lease
+    python scripts/task/engine.py --agent alice --json-status
 """
 
 from __future__ import annotations
@@ -394,6 +395,62 @@ def _generate_followups(
     )
 
 
+def cmd_json_status(args: argparse.Namespace) -> None:
+    """Emit structured JSON of task states for poll gates.
+
+    Output schema (stable contract for poll-prompt v4.6+):
+      {
+        "agent": str,
+        "as_of": ISO8601 UTC,
+        "tasks": {
+          TASK_ID: {
+            "state": str  # READY|CLAIMED|IN_PROGRESS|COMPLETE
+                          # |EXPIRED|BLOCKED
+            "claimed_at": ISO8601 | None,
+            "started_at": ISO8601 | None,
+            "completed_at": ISO8601 | None,
+            "blocked_at": ISO8601 | None,
+            "blocker_type": str | None,
+            "lease_expires": ISO8601 | None,
+            "artifacts": [
+              {"path": str, "timestamp": ISO8601}
+            ]
+          }
+        }
+      }
+
+    Note: 'state' (not 'status') and artifact 'timestamp' (not
+    'at') are the public field names; this isolates consumers
+    from internal storage naming.
+    """
+    state = _load_state(args.agent)
+    out: dict[str, object] = {
+        "agent": args.agent,
+        "as_of": _now_iso(),
+        "tasks": {},
+    }
+    tasks_out = out["tasks"]
+    assert isinstance(tasks_out, dict)
+    for tid, task in state.get("tasks", {}).items():
+        tasks_out[tid] = {
+            "state": task.get("status"),
+            "claimed_at": task.get("claimed_at"),
+            "started_at": task.get("started_at"),
+            "completed_at": task.get("completed_at"),
+            "blocked_at": task.get("blocked_at"),
+            "blocker_type": task.get("blocker_type"),
+            "lease_expires": task.get("lease_expires"),
+            "artifacts": [
+                {
+                    "path": a.get("path"),
+                    "timestamp": a.get("at"),
+                }
+                for a in task.get("artifacts", [])
+            ],
+        }
+    print(json.dumps(out, indent=2, ensure_ascii=False))
+
+
 def cmd_post_ship(args: argparse.Namespace) -> None:
     """Run post-ship cooldown sequence."""
     print("POST-SHIP COOLDOWN SEQUENCE")
@@ -456,6 +513,11 @@ def main() -> None:
         "--status", action="store_true",
         help="Show task states"
     )
+    parser.add_argument(
+        "--json-status", action="store_true",
+        dest="json_status",
+        help="Emit structured JSON for poll gates"
+    )
     args = parser.parse_args()
 
     _validate_agent(args.agent)
@@ -474,6 +536,8 @@ def main() -> None:
         cmd_post_ship(args)
     elif args.status:
         cmd_status(args)
+    elif args.json_status:
+        cmd_json_status(args)
     else:
         parser.print_help()
 
