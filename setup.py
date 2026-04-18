@@ -88,13 +88,13 @@ def cmd_init(args: argparse.Namespace) -> None:
 
     # 1. Create runtime directories
     paths = config.get("paths", {})
-    bus_root_rel = paths.get("bus_root", "system/bus")
+    bus_root_rel = paths.get("bus_root") or "system/bus"
     runtime_dirs = [
         bus_root_rel,
         os.path.join(bus_root_rel, "channels"),
         os.path.join(bus_root_rel, "receipts"),
-        paths.get("cache_dir", "system/cache"),
-        paths.get("workspaces", "workspaces"),
+        paths.get("cache_dir") or "system/cache",
+        paths.get("workspaces") or "workspaces",
     ]
 
     print("1. Runtime directories")
@@ -114,7 +114,7 @@ def cmd_init(args: argparse.Namespace) -> None:
 
     print(f"\n2. Agent workspaces ({len(agents)} agents)")
     workspaces_dir = _safe_path(
-        root, paths.get("workspaces", "workspaces")
+        root, paths.get("workspaces") or "workspaces"
     )
 
     for agent in agents:
@@ -197,7 +197,7 @@ def cmd_init(args: argparse.Namespace) -> None:
     # 3. Create default bus channels
     print("\n3. Bus channels")
     bus_root = _safe_path(
-        root, paths.get("bus_root", "system/bus")
+        root, paths.get("bus_root") or "system/bus"
     )
     channels_dir = os.path.join(bus_root, "channels")
     default_channels = ["standup", "urgent"]
@@ -252,9 +252,7 @@ def cmd_init(args: argparse.Namespace) -> None:
     print("\n4. Cron registry")
     registry_path = _safe_path(
         root,
-        paths.get(
-            "cron_registry", "system/cron-registry.json"
-        ),
+        paths.get("cron_registry") or "system/cron-registry.json",
     )
     if os.path.exists(registry_path):
         print("   [exists] cron-registry.json")
@@ -354,7 +352,7 @@ def cmd_init(args: argparse.Namespace) -> None:
     # 7. Write registry.yaml for agent list
     print("\n7. Agent registry")
     config_dir = _safe_path(
-        root, paths.get("config", "config")
+        root, paths.get("config") or "config"
     )
     registry_yaml = os.path.join(
         config_dir, "registry.yaml"
@@ -415,10 +413,10 @@ def cmd_validate(args: argparse.Namespace) -> None:
 
     paths = config.get("paths", {})
     bus_root = _safe_path(
-        root, paths.get("bus_root", "system/bus")
+        root, paths.get("bus_root") or "system/bus"
     )
     workspaces = _safe_path(
-        root, paths.get("workspaces", "workspaces")
+        root, paths.get("workspaces") or "workspaces"
     )
 
     # Check runtime dirs
@@ -498,7 +496,7 @@ def cmd_status(args: argparse.Namespace) -> None:
     print()
 
     workspaces = _safe_path(
-        root, paths.get("workspaces", "workspaces")
+        root, paths.get("workspaces") or "workspaces"
     )
     for agent in agents:
         name = (
@@ -519,7 +517,7 @@ def cmd_status(args: argparse.Namespace) -> None:
 
     print()
     bus_root = _safe_path(
-        root, paths.get("bus_root", "system/bus")
+        root, paths.get("bus_root") or "system/bus"
     )
     channels_dir = os.path.join(bus_root, "channels")
     if os.path.isdir(channels_dir):
