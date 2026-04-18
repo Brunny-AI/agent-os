@@ -127,20 +127,31 @@ jobs:
               }
             }
 
-            const failures = [];
+            // OR-gate: PASS if EITHER Gemini-current OR
+            // /codex-current matches HEAD. /codex is the
+            // primary rigor per the founder mandate
+            // (2026-04-18T13:51Z); Gemini is the automated
+            // first-pass backup. Hard AND-gate over-constrains
+            // and breaks when Gemini is unavailable (quota
+            // exhaustion, bot outage, etc.). OR-gate preserves
+            // review quality (COs still run /codex per mandate)
+            // while making Gemini non-blocking.
+            const gemini_current =
+              gemini_latest && gemini_latest.commit_id === head_sha;
+            const codex_current = Boolean(codex_head_match);
+
+            const diagnostics = [];
 
             if (!gemini_latest) {
-              failures.push(
-                'No Gemini review found on this PR. ' +
-                'Post `/gemini review` as a comment.'
+              diagnostics.push(
+                'No Gemini review found on this PR.'
               );
             } else if (gemini_latest.commit_id !== head_sha) {
               const gem_short = gemini_latest.commit_id.slice(0, 7);
               const head_short = head_sha.slice(0, 7);
-              failures.push(
+              diagnostics.push(
                 `Gemini's latest review (${gem_short}) ` +
-                `does not match HEAD (${head_short}). ` +
-                `Post \`/gemini review\` to re-trigger.`
+                `does not match HEAD (${head_short}).`
               );
             }
 
@@ -149,36 +160,46 @@ jobs:
               const marker = `<!-- codex-review: ${head_sha} -->`;
               if (codex_latest_stale) {
                 const stale_short = codex_latest_stale.sha.slice(0, 7);
-                failures.push(
+                diagnostics.push(
                   `/codex review marker found on older SHA ` +
                   `(${stale_short}), not current HEAD ` +
-                  `(${head_short}). Code Owner must re-run ` +
-                  `\`/codex\` on current HEAD and post output ` +
-                  `comment with marker \`${marker}\`.`
+                  `(${head_short}).`
                 );
               } else {
-                failures.push(
-                  'No `/codex` review marker found on this PR. ' +
-                  'Code Owner must run `/codex` and post the ' +
-                  'output as a PR comment including the marker ' +
-                  `\`${marker}\`.`
+                diagnostics.push(
+                  'No `/codex` review marker found on this PR.'
                 );
               }
             }
 
+            // PASS if EITHER is current. FAIL only if BOTH stale/missing.
+            if (gemini_current || codex_current) {
+              const head_short = head_sha.slice(0, 7);
+              const which = gemini_current && codex_current
+                ? 'Gemini + /codex'
+                : gemini_current ? 'Gemini' : '/codex';
+              core.info(
+                `✅ ${which} reviewed HEAD ${head_short}. ` +
+                `APPROVE-eligible.`
+              );
+              return;  // short-circuit; no failure
+            }
+
+            // Both missing/stale — fail with all diagnostics.
+            const failures = diagnostics;
             if (failures.length > 0) {
+              const marker = `<!-- codex-review: ${head_sha} -->`;
               const tail =
-                '\n\nBoth Gemini AND /codex must have reviewed ' +
-                'the current HEAD SHA before any Code Owner ' +
-                'APPROVE merges.';
+                '\n\nAt least ONE of Gemini or /codex must ' +
+                'have reviewed the current HEAD SHA before ' +
+                'any Code Owner APPROVE merges.\n\n' +
+                `To unblock: post \`/gemini review\` as a ` +
+                `comment (fires Gemini bot), OR run /codex ` +
+                `locally and post output comment with ` +
+                `marker \`${marker}\`.`;
               const msg = '❌ Review freshness check failed:\n\n' +
                 failures.map(f => `- ${f}`).join('\n') +
                 tail;
               core.setFailed(msg);
-            } else {
-              const head_short = head_sha.slice(0, 7);
-              core.info(
-                `✅ Gemini + /codex both reviewed HEAD ` +
-                `${head_short}. APPROVE-eligible.`
-              );
             }
+            // else: pass branch short-circuits earlier via return
