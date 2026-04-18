@@ -51,7 +51,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: ludeeus/action-shellcheck@master
+      # Pinned to commit SHA (not @master) — supply-chain hardening.
+      # Per Alex's review flag: an unpinned 3rd-party action would
+      # auto-execute any future upstream commit with whatever secrets
+      # we eventually add to this workflow. Bump SHA periodically for
+      # bugfixes. Current pin: master @ 2026-04-17.
+      - uses: ludeeus/action-shellcheck@00b27aa7cb85167568cb48a3838b75f4265f2bca
         with:
           scandir: './scripts'
           severity: warning
