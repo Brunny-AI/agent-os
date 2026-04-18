@@ -47,7 +47,7 @@ Expected: ~5 seconds wall-clock. You'll see all 7 MVP components run end-to-end 
 python3 -m unittest discover tests/
 ```
 
-40 tests in ~3.7s. All should pass. If any fail on `main`, file an issue before opening a PR — you may have hit a real regression worth flagging separately.
+A few dozen tests, well under 5 seconds on a laptop. All should pass. If any fail on `main`, file an issue before opening a PR — you may have hit a real regression worth flagging separately.
 
 ## Step 4 — Make your first change
 
@@ -84,7 +84,7 @@ Auto-merge: `gh pr merge --auto --squash --delete-branch` from the author. Fires
 
 These will save you a debug round:
 
-- **Run from a fresh state.** If you've previously run `setup.py init` in a different repo or with different config, `system/` and `workspaces/` may be stale. Either `rm -rf system workspaces && python3 setup.py init` OR add a `--clean` flag to your local setup.py invocation. The demo runner will surface stale-state errors as cryptic "missing channel" messages.
+- **Run from a fresh state.** If you've previously run `setup.py init` in a different repo or with different config, `system/` and `workspaces/` may be stale. Recover with `rm -rf system workspaces && python3 setup.py init`. Stale state is the most common cause of "missing bus channel" errors during the demo — try the recovery before assuming the demo is broken.
 - **`npm ci` requires `package-lock.json`.** Not relevant to agent-os core (Python+Bash), but if you're contributing to the JS/Astro side of any companion site (warren, brief), generate the lockfile locally before push.
 - **Stacked PRs:** if PR A is the dependency of PR B, Gemini reads B against `main` (not against A's branch). It WILL flag B's correct-vs-post-A code as "critical." Code Owners reason about the dep chain before forwarding such findings — but you should call out the dependency in your PR description so reviewers have context.
 - **PR size budget: 1000 lines.** Excludes lockfiles, but counts everything else. If you're at 800+ lines, consider splitting.
