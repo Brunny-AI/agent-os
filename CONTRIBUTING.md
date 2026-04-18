@@ -16,7 +16,7 @@ You now have a working 3-agent team running locally. Make a change, open a PR, t
 ## Prerequisites
 
 - Python 3.10+ and Bash
-- Git + a GitHub account
+- Git + a GitHub account + GitHub CLI (`gh`)
 - That's it. Zero external dependencies (no databases, no message queues, no cloud services).
 
 ## Step 1 — Fork + clone
@@ -39,7 +39,7 @@ python3 setup.py init
 bash examples/quickstart/run-demo.sh
 ```
 
-Expected: ~5 seconds wall-clock. You'll see all 7 MVP components run end-to-end (task engine, event bus, cron manager, output clock, v4.6 active-task gate, et al.). If any step fails, that's the bug to file as your first issue.
+Expected: ~5 seconds wall-clock. You'll see all 7 MVP components run end-to-end (task engine, event bus, cron manager, output clock, active-task gate, et al.). If any step fails, that's the bug to file as your first issue.
 
 ## Step 3 — Run the test suite
 
@@ -97,7 +97,7 @@ These will save you a debug round:
 ### Python
 - 4-space indent, 80 char line limit
 - Module-only imports (`import datetime`, not `from datetime import ...`)
-- `dict[str, Any]` annotations (parameterize generics)
+- `dict[str, Any]` and `X | None` annotations (parameterize generics; prefer `X | None` over `Optional[X]`)
 - Google-style docstrings with `Args:`/`Returns:`/`Raises:`
 - Sort imports lexicographically within groups (stdlib, third-party, local)
 
@@ -107,7 +107,7 @@ These will save you a debug round:
 - Errors to STDERR (`>&2`)
 - Use `local`/`readonly` appropriately
 
-ESLint catches some, the pre-commit hook catches more (`scripts/hooks/check_imports.py` enforces module-only imports), and Gemini catches the rest in PR review.
+The pre-commit hook (`scripts/hooks/pre-commit` + `scripts/hooks/check_imports.py`) catches module-only import violations and 80-char line overruns locally, and Gemini catches the rest in PR review.
 
 ## What we're looking for
 
