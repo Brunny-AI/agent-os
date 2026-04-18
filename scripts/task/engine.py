@@ -424,14 +424,16 @@ def cmd_json_status(args: argparse.Namespace) -> None:
     from internal storage naming.
     """
     state = _load_state(args.agent)
+    raw_tasks = state.get("tasks") or {}
+    if not isinstance(raw_tasks, dict):
+        raw_tasks = {}
+    tasks_out: dict[str, dict[str, object]] = {}
     out: dict[str, object] = {
         "agent": args.agent,
         "as_of": _now_iso(),
-        "tasks": {},
+        "tasks": tasks_out,
     }
-    tasks_out = out["tasks"]
-    assert isinstance(tasks_out, dict)
-    for tid, task in state.get("tasks", {}).items():
+    for tid, task in raw_tasks.items():
         tasks_out[tid] = {
             "state": task.get("status"),
             "claimed_at": task.get("claimed_at"),

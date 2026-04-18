@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -47,6 +48,9 @@ class JsonStatusContractTest(unittest.TestCase):
 
     def setUp(self) -> None:
         self.tmp = tempfile.mkdtemp()
+        self.addCleanup(
+            shutil.rmtree, self.tmp, ignore_errors=True
+        )
         self.agent = "alice"
 
     def test_empty_state_produces_well_formed_envelope(self) -> None:
