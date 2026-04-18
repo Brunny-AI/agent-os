@@ -57,7 +57,14 @@ EXCLUDED_EXTENSIONS = {".pyc", ".pyo", ".lock"}
 
 
 def _get_agents() -> list[str]:
-    """Read agent list from registry."""
+    """Read agent list from registry.
+
+    Strips surrounding YAML quotes so names match _AGENT_RE
+    downstream. Without this strip, a registry entry like
+    `- ldap: "alice"` parses to the literal string `"alice"`
+    (with embedded quote chars), which fails the regex and
+    silently returns NOT_FOUND for every agent.
+    """
     registry = os.path.join(
         _repo_root(), "config", "registry.yaml"
     )
@@ -67,9 +74,10 @@ def _get_agents() -> list[str]:
             for line in f:
                 line = line.strip()
                 if line.startswith("- ldap:"):
-                    agents.append(
-                        line.split(":", 1)[1].strip()
-                    )
+                    name = line.split(":", 1)[1].strip()
+                    name = name.strip("\"'")
+                    if name:
+                        agents.append(name)
     except FileNotFoundError:
         pass
     return agents
