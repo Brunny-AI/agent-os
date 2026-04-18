@@ -101,6 +101,25 @@ while IFS= read -r file; do
   esac
 done <<< "${staged_files}"
 
+# 8. Top-level stdlib import enforcement (rule 19).
+#    Catches `from datetime import datetime` etc. before push.
+#    Same drift landed in PR #24/#29/#30 R1 — three rounds of
+#    the same correction. Local catch removes the round.
+checker="scripts/hooks/check_imports.py"
+if [[ -f "${checker}" ]]; then
+  while IFS= read -r file; do
+    [[ -z "${file}" ]] && continue
+    case "${file}" in
+      *.py)
+        if ! git show ":${file}" \
+            | python3 "${checker}" "${file}"; then
+          fail=1
+        fi
+        ;;
+    esac
+  done <<< "${staged_files}"
+fi
+
 if [[ "${fail}" -eq 1 ]]; then
   echo "" >&2
   echo "Fix issues above before committing. Bypass with" >&2
