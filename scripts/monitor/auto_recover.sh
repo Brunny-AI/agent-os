@@ -142,37 +142,41 @@ while IFS= read -r ldap; do
   fi
 
   # Build startup prompt
-  startup_prompt="You are ${ldap}." \
-    "Auto-recovered session." \
-    "Working directory: ${REPO_ROOT}." \
-    "Read workspaces/${ldap}/CLAUDE.md, then" \
-    "execute your Session Startup checklist." \
-    "Note: this session was auto-started by the" \
-    "watchdog. Check the bus for missed messages."
+  startup_prompt="You are ${ldap}. Auto-recovered session. "
+  startup_prompt+="Working directory: ${REPO_ROOT}. "
+  startup_prompt+="Read workspaces/${ldap}/CLAUDE.md, then "
+  startup_prompt+="execute your Session Startup checklist. "
+  startup_prompt+="Note: this session was auto-started by "
+  startup_prompt+="the watchdog. Check the bus for missed "
+  startup_prompt+="messages."
 
   if ${DRY_RUN}; then
-    echo "AUTO-RECOVER [dry-run]: Would restart" \
-         "${ldap} in ${SESSION_MGR} '${session_name}'"
+    echo "AUTO-RECOVER [dry-run]: Would restart ${ldap}" \
+         "in ${SESSION_MGR} '${session_name}'"
   else
     echo "AUTO-RECOVER: Restarting ${ldap}..."
 
-    start_session "${session_name}" \
-      "cd '${REPO_ROOT}' && claude" \
-      "--dangerously-skip-permissions" \
-      "'${startup_prompt}' 2>&1 |" \
-      "tee /tmp/agent-os-${ldap}-recovery.log;" \
-      "echo 'Session ended. Press enter.';" \
-      "read"
+    # Shell-escape substitutions before embedding in the
+    # command string (fed to `bash -c` inside start_session).
+    # ldap is validated alphanumeric, but defence in depth.
+    escaped_root=$(printf '%q' "${REPO_ROOT}")
+    escaped_prompt=$(printf '%q' "${startup_prompt}")
+    escaped_ldap=$(printf '%q' "${ldap}")
 
-    echo "AUTO-RECOVER: ${ldap} restarted in" \
-         "${SESSION_MGR} '${session_name}'"
+    start_session "${session_name}" \
+      "cd ${escaped_root} && claude \
+--dangerously-skip-permissions ${escaped_prompt} \
+2>&1 | tee /tmp/agent-os-${escaped_ldap}-recovery.log; \
+echo 'Session ended. Press enter.'; read"
+
+    echo "AUTO-RECOVER: ${ldap} restarted in ${SESSION_MGR} '${session_name}'"
     echo "  Attach: ${SESSION_MGR} -r ${session_name}"
 
     # Bus notification (best-effort)
     python3 "${BUS_SCRIPTS}/send.py" \
       --channel urgent --from watchdog --to all \
-      --body "AUTO-RECOVER: ${ldap} restarted in" \
-             "${SESSION_MGR} '${session_name}'." \
+      --body "AUTO-RECOVER: ${ldap} restarted in \
+${SESSION_MGR} '${session_name}'." \
       --bus "${REPO_ROOT}/system/bus" 2>&1 || true
 
     if ${NOTIFY}; then

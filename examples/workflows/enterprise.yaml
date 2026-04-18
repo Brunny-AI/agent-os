@@ -26,24 +26,14 @@ workflow:
     - "merge"
   custom_steps:
     security_review:
-      description: >
-        Run adversarial review on the diff. Look for
-        command injection, path traversal, race
-        conditions, and credential leaks. Address all
-        findings before proceeding.
+      description: "Run adversarial review on the diff. Look for command injection, path traversal, race conditions, and credential leaks. Address all findings before proceeding."
       required: true
     compliance_gate:
-      description: >
-        Coordinator reviews for policy compliance:
-        privacy boundary, architecture constraints,
-        and operational impact. Required sign-off.
+      description: "Coordinator reviews for policy compliance: privacy boundary, architecture constraints, and operational impact. Required sign-off."
       required: true
       required_role: "coordinator"
     external_ci:
-      description: >
-        External automated review (GitHub Actions,
-        Gemini Code Assist, or similar). Address
-        feedback and re-request review until clean.
+      description: "External automated review (GitHub Actions, Gemini Code Assist, or similar). Address feedback and re-request review until clean."
       required: true
   permissions:
     coordinator:

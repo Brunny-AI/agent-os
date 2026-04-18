@@ -46,7 +46,8 @@ fi
 
 # Paths (relative to AGENT_OS_ROOT)
 readonly FLAG="${WORKDIR}/system/shift-refresh-${AGENT}"
-readonly HANDOFF="${WORKDIR}/workspaces/${AGENT}/logs/progress/session-handoff.md"
+readonly HANDOFF="${WORKDIR}/workspaces/${AGENT}\
+/logs/progress/session-handoff.md"
 readonly SENTINEL="--- HANDOFF COMPLETE ---"
 readonly GIT_LOCK="${WORKDIR}/workspaces/.git/index.lock"
 readonly LOCK_DIR="${WORKDIR}/system/.agent-loop-${AGENT}.lock.d"
@@ -362,9 +363,8 @@ while true; do
     # Bus notification (best-effort)
     python3 "${WORKDIR}/scripts/bus/send.py" \
       --channel standup --from "${AGENT}" \
-      --body "SHIFT REFRESH: ${AGENT} completed shift" \
-             "${SHIFT} (${duration}s). Reason: ${REASON}." \
-             "Restarting." \
+      --body "SHIFT REFRESH: ${AGENT} completed shift \
+${SHIFT} (${duration}s). Reason: ${REASON}. Restarting." \
       --bus "${WORKDIR}/system/bus" 2>/dev/null || true
 
     CLAUDE_PID=""
@@ -387,10 +387,9 @@ while true; do
 
       python3 "${WORKDIR}/scripts/bus/send.py" \
         --channel urgent --from "${AGENT}" \
-        --body "CRASH LOOP: agent_loop.sh for ${AGENT}" \
-               "hit ${rapid_count} rapid exits." \
-               "Exit code: ${CLAUDE_EXIT}. Manual" \
-               "intervention needed." \
+        --body "CRASH LOOP: agent_loop.sh for ${AGENT} hit \
+${rapid_count} rapid exits. Exit code: ${CLAUDE_EXIT}. \
+Manual intervention needed." \
         --bus "${WORKDIR}/system/bus" 2>/dev/null || true
       exit 1
     fi

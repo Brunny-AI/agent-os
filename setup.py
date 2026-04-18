@@ -88,13 +88,13 @@ def cmd_init(args: argparse.Namespace) -> None:
 
     # 1. Create runtime directories
     paths = config.get("paths", {})
-    bus_root_rel = paths.get("bus_root", "system/bus")
+    bus_root_rel = paths.get("bus_root") or "system/bus"
     runtime_dirs = [
         bus_root_rel,
         os.path.join(bus_root_rel, "channels"),
         os.path.join(bus_root_rel, "receipts"),
-        paths.get("cache_dir", "system/cache"),
-        paths.get("workspaces", "workspaces"),
+        paths.get("cache_dir") or "system/cache",
+        paths.get("workspaces") or "workspaces",
     ]
 
     print("1. Runtime directories")
@@ -114,7 +114,7 @@ def cmd_init(args: argparse.Namespace) -> None:
 
     print(f"\n2. Agent workspaces ({len(agents)} agents)")
     workspaces_dir = _safe_path(
-        root, paths.get("workspaces", "workspaces")
+        root, paths.get("workspaces") or "workspaces"
     )
 
     for agent in agents:
@@ -197,7 +197,7 @@ def cmd_init(args: argparse.Namespace) -> None:
     # 3. Create default bus channels
     print("\n3. Bus channels")
     bus_root = _safe_path(
-        root, paths.get("bus_root", "system/bus")
+        root, paths.get("bus_root") or "system/bus"
     )
     channels_dir = os.path.join(bus_root, "channels")
     default_channels = ["standup", "urgent"]
@@ -252,9 +252,7 @@ def cmd_init(args: argparse.Namespace) -> None:
     print("\n4. Cron registry")
     registry_path = _safe_path(
         root,
-        paths.get(
-            "cron_registry", "system/cron-registry.json"
-        ),
+        paths.get("cron_registry") or "system/cron-registry.json",
     )
     if os.path.exists(registry_path):
         print("   [exists] cron-registry.json")
@@ -272,8 +270,62 @@ def cmd_init(args: argparse.Namespace) -> None:
             f.write("\n")
         print("   [created] cron-registry.json")
 
-    # 5. Install git hooks
-    print("\n5. Git hooks")
+    # 5. Merge rules (defaults/rules + config/rules -> .claude/rules)
+    print("\n5. Rules")
+    defaults_rules = os.path.join(root, "defaults", "rules")
+    config_rules = _safe_path(
+        root, os.path.join(
+            paths.get("config") or "config", "rules"
+        )
+    )
+    claude_rules = os.path.join(root, ".claude", "rules")
+
+    if os.path.isdir(defaults_rules):
+        if dry_run:
+            print(f"   [would merge] defaults/rules/ -> .claude/rules/")
+            if os.path.isdir(config_rules):
+                print(f"   [would merge] config/rules/ (overrides)")
+        else:
+            # Clear stale rules so deletions in defaults/config propagate.
+            # .claude/rules is generated output, not user-edited directly.
+            # shutil.rmtree handles subdirectories and non-empty dirs;
+            # listdir+os.remove only handled top-level files.
+            if os.path.isdir(claude_rules):
+                shutil.rmtree(claude_rules)
+            os.makedirs(claude_rules, exist_ok=True)
+            # Copy defaults first
+            copied = 0
+            for fname in os.listdir(defaults_rules):
+                src = os.path.join(defaults_rules, fname)
+                dst = os.path.join(claude_rules, fname)
+                if os.path.isfile(src):
+                    shutil.copy2(src, dst)
+                    copied += 1
+            print(f"   [merged] {copied} rules from defaults/")
+            # Override with user rules
+            if os.path.isdir(config_rules):
+                overridden = 0
+                added = 0
+                for fname in os.listdir(config_rules):
+                    src = os.path.join(config_rules, fname)
+                    dst = os.path.join(claude_rules, fname)
+                    if os.path.isfile(src):
+                        if os.path.exists(dst):
+                            overridden += 1
+                        else:
+                            added += 1
+                        shutil.copy2(src, dst)
+                print(
+                    f"   [merged] config/rules/ "
+                    f"({overridden} overridden, {added} added)"
+                )
+            else:
+                print("   [skip] no config/rules/ overrides")
+    else:
+        print("   [skip] no defaults/rules/ found")
+
+    # 6. Install git hooks
+    print("\n6. Git hooks")
     hooks_src = os.path.join(root, "scripts", "hooks")
     hooks_dst = os.path.join(root, ".git", "hooks")
 
@@ -296,10 +348,10 @@ def cmd_init(args: argparse.Namespace) -> None:
                 os.chmod(dst, 0o755)
                 print(f"   [installed] {hook}")
 
-    # 6. Write registry.yaml for agent list
-    print("\n6. Agent registry")
+    # 7. Write registry.yaml for agent list
+    print("\n7. Agent registry")
     config_dir = _safe_path(
-        root, paths.get("config", "config")
+        root, paths.get("config") or "config"
     )
     registry_yaml = os.path.join(
         config_dir, "registry.yaml"
@@ -360,10 +412,10 @@ def cmd_validate(args: argparse.Namespace) -> None:
 
     paths = config.get("paths", {})
     bus_root = _safe_path(
-        root, paths.get("bus_root", "system/bus")
+        root, paths.get("bus_root") or "system/bus"
     )
     workspaces = _safe_path(
-        root, paths.get("workspaces", "workspaces")
+        root, paths.get("workspaces") or "workspaces"
     )
 
     # Check runtime dirs
@@ -443,7 +495,7 @@ def cmd_status(args: argparse.Namespace) -> None:
     print()
 
     workspaces = _safe_path(
-        root, paths.get("workspaces", "workspaces")
+        root, paths.get("workspaces") or "workspaces"
     )
     for agent in agents:
         name = (
@@ -464,7 +516,7 @@ def cmd_status(args: argparse.Namespace) -> None:
 
     print()
     bus_root = _safe_path(
-        root, paths.get("bus_root", "system/bus")
+        root, paths.get("bus_root") or "system/bus"
     )
     channels_dir = os.path.join(bus_root, "channels")
     if os.path.isdir(channels_dir):
