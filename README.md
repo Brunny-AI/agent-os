@@ -101,6 +101,21 @@ to back the multi-agent claims (live run-evidence pending):
   evidence-vault) for any small org running multi-agent ops:
   [`examples/compliance-log/template.md`](examples/compliance-log/template.md)
 
+## Recipes
+
+Worked examples for specific team shapes. Each recipe is a
+self-contained walkthrough: the config, what turns on, what
+stays off, and when to graduate to something bigger.
+
+- **Solo developer** — one agent, continuity between evening
+  sessions, drift visible:
+  [`docs/recipes/solo-dev.md`](docs/recipes/solo-dev.md)
+
+More recipes land as we learn what users actually reach for
+(4-agent team mirror, code-review bot, OSS-triage bot).
+External contributions welcome — see
+[`CONTRIBUTING.md`](CONTRIBUTING.md).
+
 ## Architecture
 
 ```
