@@ -44,9 +44,13 @@ governance:
   checkout_approver_agent: "me"
 
 # Default workflow assumes a peer reviewer (min_reviewers: 2).
-# With one agent, no peer exists — override to 1 so the solo
-# author's own review satisfies the gate. This matches the
-# precedent set by `examples/workflows/minimal.yaml`.
+# With one agent, no peer exists — lower the reviewer count
+# to 1 so workflow steps that read this config don't block
+# on a missing peer. Matches precedent set by
+# `examples/workflows/minimal.yaml`. (The prose at
+# `defaults/rules/pr-workflow.md` still describes a multi-
+# agent flow; in solo mode the min_reviewers: 1 value is the
+# effective gate.)
 workflow:
   min_reviewers: 1
 ```
@@ -90,10 +94,12 @@ These run but have nothing to do in solo mode:
 - **Event bus.** Still runs (same JSONL machinery).
   Posts go to you. Useful as a notes channel; silent
   if unused.
-- **Mutual-unblock / CO-review rules.** These are
-  GitHub branch-protection patterns we layer on top
-  of Agent OS for multi-agent repos. In a solo repo
-  you don't configure them.
+- **GitHub peer-review gating.** Multi-agent repos
+  typically configure branch-protection rules (CODEOWNERS,
+  required reviewer count, required status checks) that
+  presume multiple contributors. In a solo repo, skip the
+  branch protection rules that require reviewers; CI
+  status checks still apply.
 
 ## Daily workflow
 
