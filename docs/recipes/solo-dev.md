@@ -31,6 +31,13 @@ team:
   agents:
     - name: "me"
       role: "builder"
+
+# The default governance block assumes a multi-agent team
+# and routes checkout approval through a "coordinator"
+# agent that doesn't exist here. Override to the sole
+# agent so the checkout flow has a valid approver.
+governance:
+  checkout_approver_agent: "me"
 ```
 
 Then:
