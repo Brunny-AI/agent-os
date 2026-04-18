@@ -96,5 +96,75 @@ class OutputClockStaleTransitionTest(unittest.TestCase):
         )
 
 
+class OutputClockRegistryParseTest(unittest.TestCase):
+    """Registry names with YAML quotes must parse correctly.
+
+    Regression test: setup.py writes config/registry.yaml with
+    `- ldap: "alice"` (quoted). Without stripping the quotes,
+    _get_agents returns the literal string `"alice"`, which
+    fails the `[a-zA-Z0-9_-]+` regex and silently returns
+    NOT_FOUND for every agent in --all scans.
+    """
+
+    def setUp(self) -> None:
+        self.root = _fixtures.mk_temp_workspace()
+        self.workspace = os.path.join(
+            self.root, "workspaces", "alice"
+        )
+        os.makedirs(self.workspace)
+        # Write a real artifact so the scan has something
+        # to find (otherwise it'd report IDLE even with the
+        # fix, masking the regression).
+        with open(
+            os.path.join(self.workspace, "out.txt"), "w"
+        ) as f:
+            f.write("real output\n")
+
+        # Mimic what setup.py writes: quoted ldap values
+        os.makedirs(os.path.join(self.root, "config"))
+        with open(
+            os.path.join(self.root, "config", "registry.yaml"),
+            "w",
+        ) as f:
+            f.write(
+                "agents:\n"
+                "  - ldap: \"alice\"\n"
+                "    role: \"coordinator\"\n"
+            )
+
+    def tearDown(self) -> None:
+        _fixtures.cleanup(self.root)
+
+    def test_quoted_ldap_names_resolve_to_real_status(self) -> None:
+        result = _fixtures.run_script(
+            "scripts/monitor/output_clock.py",
+            "--all", "--minutes", "30", "--json",
+            env_extra={"AGENT_OS_ROOT": self.root},
+        )
+        if result.returncode != 0:
+            raise RuntimeError(
+                f"output_clock --all failed: "
+                f"{result.stderr}"
+            )
+        data = json.loads(result.stdout)
+        # data is a list of {agent, status, ...}
+        self.assertIsInstance(data, list)
+        agents = {a["agent"]: a["status"] for a in data}
+        # The registry has alice with quotes; with the fix,
+        # the agent key is "alice" (no embedded quotes) and
+        # status is something other than NOT_FOUND.
+        self.assertIn(
+            "alice", agents,
+            f"agent 'alice' missing from --all output; "
+            f"saw keys: {list(agents.keys())} (suggests "
+            f"quote-stripping regression)",
+        )
+        self.assertNotEqual(
+            agents["alice"], "NOT_FOUND",
+            "alice resolved to NOT_FOUND despite real "
+            "files in workspace — quoted-name regression",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
