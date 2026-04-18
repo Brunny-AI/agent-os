@@ -42,6 +42,56 @@ run() {
 
 readonly START_TS=$(date +%s)
 
+# Step 0 — fresh-state precondition check.
+#
+# If a previous `setup.py init` ran in this clone (or system/
+# was copied in from another repo), partial state can survive
+# in `system/` or `workspaces/`. Subsequent demo runs hit
+# cryptic 'Missing bus channel' errors that look like product
+# bugs but are stale-state artifacts.
+#
+# Detect partial state, print the actionable recovery, and
+# exit. A truly-fresh clone OR a fully-initialized state both
+# proceed cleanly.
+echo
+echo "${C_HEAD}[step 0] Check for fresh state${C_OFF}"
+
+system_exists=0
+workspaces_exists=0
+[ -d system ] && system_exists=1
+[ -d workspaces ] && workspaces_exists=1
+
+if [ "${system_exists}" -eq 1 ] || [ "${workspaces_exists}" -eq 1 ]; then
+  # Some state exists. Verify it's the FULL initialized shape
+  # (standup + urgent channels present, ${DEMO_AGENT} workspace
+  # present). If anything is missing, treat as partial.
+  fully_initialized=1
+  [ ! -d "system/bus/channels/standup" ] && fully_initialized=0
+  [ ! -d "system/bus/channels/urgent" ] && fully_initialized=0
+  [ ! -d "workspaces/${DEMO_AGENT}" ] && fully_initialized=0
+
+  if [ "${fully_initialized}" -eq 0 ]; then
+    echo "${C_OFF}" >&2
+    echo "ERROR: partial state detected." >&2
+    echo "  system/ exists: ${system_exists}" >&2
+    echo "  workspaces/ exists: ${workspaces_exists}" >&2
+    echo "  fully-initialized shape: NO" >&2
+    echo "" >&2
+    echo "This usually means setup.py init ran previously" >&2
+    echo "but didn't complete, OR system/ was copied in from" >&2
+    echo "another repo. Recover with:" >&2
+    echo "" >&2
+    echo "    rm -rf system workspaces" >&2
+    echo "    python3 setup.py init" >&2
+    echo "    bash examples/quickstart/run-demo.sh" >&2
+    echo "" >&2
+    exit 1
+  fi
+  echo "${C_OK}>> Fully-initialized state detected. Proceeding.${C_OFF}"
+else
+  echo "${C_OK}>> Fresh clone detected. Proceeding.${C_OFF}"
+fi
+
 step 1 "Run the test suite from a clean clone (no setup needed)"
 run python3 -m unittest discover tests/ 2>&1 | tail -3
 echo "${C_OK}>> Tests prove the framework before you trust it.${C_OFF}"
