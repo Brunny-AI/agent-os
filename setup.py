@@ -277,7 +277,7 @@ def cmd_init(args: argparse.Namespace) -> None:
     defaults_rules = os.path.join(root, "defaults", "rules")
     config_rules = _safe_path(
         root, os.path.join(
-            paths.get("config", "config"), "rules"
+            paths.get("config") or "config", "rules"
         )
     )
     claude_rules = os.path.join(root, ".claude", "rules")
@@ -288,6 +288,13 @@ def cmd_init(args: argparse.Namespace) -> None:
             if os.path.isdir(config_rules):
                 print(f"   [would merge] config/rules/ (overrides)")
         else:
+            # Clear stale rules so deletions in defaults/config propagate.
+            # .claude/rules is generated output, not user-edited directly.
+            if os.path.isdir(claude_rules):
+                for fname in os.listdir(claude_rules):
+                    fpath = os.path.join(claude_rules, fname)
+                    if os.path.isfile(fpath):
+                        os.remove(fpath)
             os.makedirs(claude_rules, exist_ok=True)
             # Copy defaults first
             copied = 0
