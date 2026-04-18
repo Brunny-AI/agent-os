@@ -46,7 +46,8 @@ fi
 
 # Paths (relative to AGENT_OS_ROOT)
 readonly FLAG="${WORKDIR}/system/shift-refresh-${AGENT}"
-readonly HANDOFF="${WORKDIR}/workspaces/${AGENT}/logs/progress/session-handoff.md"
+readonly HANDOFF="${WORKDIR}/workspaces/${AGENT}\
+/logs/progress/session-handoff.md"
 readonly SENTINEL="--- HANDOFF COMPLETE ---"
 readonly GIT_LOCK="${WORKDIR}/workspaces/.git/index.lock"
 readonly LOCK_DIR="${WORKDIR}/system/.agent-loop-${AGENT}.lock.d"

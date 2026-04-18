@@ -151,7 +151,8 @@ while IFS= read -r ldap; do
   startup_prompt+="messages."
 
   if ${DRY_RUN}; then
-    echo "AUTO-RECOVER [dry-run]: Would restart ${ldap} in ${SESSION_MGR} '${session_name}'"
+    echo "AUTO-RECOVER [dry-run]: Would restart ${ldap}" \
+         "in ${SESSION_MGR} '${session_name}'"
   else
     echo "AUTO-RECOVER: Restarting ${ldap}..."
 
@@ -167,7 +168,8 @@ echo 'Session ended. Press enter.'; read"
     # Bus notification (best-effort)
     python3 "${BUS_SCRIPTS}/send.py" \
       --channel urgent --from watchdog --to all \
-      --body "AUTO-RECOVER: ${ldap} restarted in ${SESSION_MGR} '${session_name}'." \
+      --body "AUTO-RECOVER: ${ldap} restarted in \
+${SESSION_MGR} '${session_name}'." \
       --bus "${REPO_ROOT}/system/bus" 2>&1 || true
 
     if ${NOTIFY}; then
