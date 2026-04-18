@@ -1,0 +1,112 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# Workflow-level default: all jobs get read-only repo access.
+# No job in this workflow writes to the repo, creates releases,
+# or touches security events. Addresses the github-advanced-security
+# "Workflow does not contain permissions" finding.
+permissions:
+  contents: read
+
+jobs:
+  privacy:
+    name: Privacy scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # NOTE: patterns must stay in sync with scripts/hooks/pre-push.
+      # The pre-push hook reads from git stdin and can't run in CI;
+      # these greps inline the same scan. Update both together.
+      - name: Check for real emails
+        run: |
+          set -e
+          matches=$(grep -rnE \
+            '[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}' \
+            . --exclude-dir=.git --exclude-dir=scripts/hooks \
+            --include='*.md' --include='*.py' --include='*.sh' \
+            --include='*.yaml' --include='*.json' \
+            2>/dev/null | grep -v '@example\.com' \
+            | grep -v '@users\.noreply\.github\.com' \
+            | grep -v 'placeholder' || true)
+          if [ -n "$matches" ]; then
+            echo "ERROR: real emails found:" >&2
+            echo "$matches" >&2
+            exit 1
+          fi
+      - name: Check for credential or path patterns
+        run: |
+          set -e
+          matches=$(grep -rnE \
+            '/Users/[a-zA-Z]|/home/[a-zA-Z]|/ssh/id_|BEGIN.*PRIVATE KEY' \
+            . --exclude-dir=.git --exclude-dir=scripts/hooks \
+            --include='*.md' --include='*.py' --include='*.sh' \
+            --include='*.yaml' --include='*.json' \
+            2>/dev/null || true)
+          if [ -n "$matches" ]; then
+            echo "ERROR: credential or path patterns found:" >&2
+            echo "$matches" >&2
+            exit 1
+          fi
+
+  shell-lint:
+    name: Shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Pinned to commit SHA (not @master) — supply-chain hardening.
+      # Per Alex's review flag: an unpinned 3rd-party action would
+      # auto-execute any future upstream commit with whatever secrets
+      # we eventually add to this workflow. Bump SHA periodically for
+      # bugfixes. Current pin: master @ 2026-04-17.
+      - uses: ludeeus/action-shellcheck@00b27aa7cb85167568cb48a3838b75f4265f2bca
+        with:
+          scandir: './scripts'
+          severity: warning
+          ignore_paths: scripts/hooks
+
+  pr-size:
+    name: PR size check
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check line count
+        run: |
+          set -e
+          base="origin/${{ github.base_ref }}"
+          git fetch origin "${{ github.base_ref }}"
+          stats=$(git diff --shortstat "${base}"..HEAD)
+          adds=$(echo "$stats" | grep -oE '[0-9]+ insertion' \
+            | grep -oE '[0-9]+' || echo 0)
+          dels=$(echo "$stats" | grep -oE '[0-9]+ deletion' \
+            | grep -oE '[0-9]+' || echo 0)
+          total=$((adds + dels))
+          echo "PR size: $total lines changed (+$adds / -$dels)"
+          if [ $total -gt 1000 ]; then
+            echo "ERROR: PR exceeds 1000-line limit" >&2
+            echo "See .claude/rules/pr-workflow.md" >&2
+            exit 1
+          fi
+
+  tests:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Run tests
+        run: |
+          if [ -d tests ]; then
+            python3 -m unittest discover tests/ -v
+          else
+            echo "No tests/ directory yet; passing (tests PR is a follow-up)"
+          fi
