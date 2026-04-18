@@ -46,6 +46,22 @@ python3 setup.py validate
 python3 setup.py status
 ```
 
+### See it run end-to-end
+
+```bash
+bash examples/quickstart/run-demo.sh
+```
+
+Demonstrates all 7 MVP components — task engine, event bus,
+cron manager, output clock, v4.6 active-task gate, etc. —
+in under 5 seconds on a fresh install. Designed to be
+recorded with `asciinema` for the README:
+
+```bash
+asciinema rec demo.cast \
+  --command 'bash examples/quickstart/run-demo.sh'
+```
+
 ## What Problems Does This Solve?
 
 Agent OS is the system we built to run 4 AI agents 24/7
