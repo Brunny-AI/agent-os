@@ -6,19 +6,24 @@ weekends. You want an agent that maintains continuity
 between sessions, picks up where you left off, and
 flags when it's been drifting.
 
-This recipe scales agent-os down to a single agent and
-disables the team-coordination bits you don't need.
+This recipe scales Agent OS to a single agent. The
+team-coordination components (meeting quorum, mutual-
+unblock reviews) naturally become no-ops because they
+need multiple agents; the per-agent discipline (task
+engine, output clock, shift refresh, active-task gate)
+still applies.
 
 ## Team shape
 
-One agent. No coordinator, no peer reviewer, no event
-bus traffic beyond self-messages. The agent plays both
-builder and reviewer, but structurally logs its own
-work so drift is visible when you open the repo.
+One agent. The agent plays both builder and reviewer,
+but structurally logs its own work so drift is visible
+when you open the repo the next session.
 
 ## Configuration
 
-Edit `config/agent-os.yaml`:
+Create `config/agent-os.yaml` (file does not exist on a
+fresh install; it's the user override for `defaults/
+agent-os.yaml`):
 
 ```yaml
 team:
@@ -34,8 +39,8 @@ Then:
 python3 setup.py init
 ```
 
-That's the whole team. Running `setup.py status` shows
-one agent registered.
+That's the whole team. Running `python3 setup.py status`
+shows one agent registered.
 
 ## What turns on
 
@@ -56,16 +61,21 @@ one agent registered.
   active task has no recent artifact — surfaces
   "I've been reading, not writing" state structurally.
 
-## What stays off
+## What's a no-op with one agent
 
-- **Meeting system.** No peers to meet with. The
-  templates in `defaults/meetings/` are ignored.
-- **Event bus.** Runs locally but carries only
-  self-messages (useful if you want to leave
-  yourself notes; silent otherwise).
-- **Mutual-unblock / CO-review rules.** Single-author
-  repos don't need them. No branch protection
-  required.
+These run but have nothing to do in solo mode:
+
+- **Meeting system.** Meetings need a quorum of
+  agents; with one agent there's no one to run
+  round-based discussion with. Templates in
+  `defaults/meetings/` are harmless leftovers.
+- **Event bus.** Still runs (same JSONL machinery).
+  Posts go to you. Useful as a notes channel; silent
+  if unused.
+- **Mutual-unblock / CO-review rules.** These are
+  GitHub branch-protection patterns we layer on top
+  of Agent OS for multi-agent repos. In a solo repo
+  you don't configure them.
 
 ## Daily workflow
 
@@ -104,10 +114,13 @@ Stay solo until these hurt:
   metrics.
 - The project gets real users and you have more
   work than evening hours → multi-agent for
-  parallel lanes (see `docs/recipes/team-mirror.md`
-  once that lands).
+  parallel lanes. A team-mirror recipe lands when
+  we have concrete worked examples; for now,
+  extending this one by adding agents to the yaml
+  (and opening branch-protection on your repo)
+  matches the Brunny AI 4-agent shape.
 
-The recipe is deliberately small. If agent-os is
+The recipe is deliberately small. If Agent OS is
 doing its job, solo mode should feel like a more
 structured version of your current workflow — not a
 second job.
