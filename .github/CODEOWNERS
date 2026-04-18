@@ -1,0 +1,16 @@
+# Agent OS Code Owners
+#
+# Every file in this repository is owned by the PM role.
+# The PM's job on PR review: verify Gemini Code Assist
+# feedback was properly addressed — not just the literal
+# flagged line, but the same class of issue across the
+# touched files.
+#
+# Paired with branch protection rule on main requiring
+# "Require review from Code Owners" — this makes the PM's
+# APPROVE structurally mandatory before merge.
+#
+# For PM-authored PRs: admin override (founder merges
+# after coordinator approves internally).
+
+* @brunny-kai
