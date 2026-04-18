@@ -1,0 +1,168 @@
+# .github/workflows/verify-review-freshness.yml
+#
+# Purpose: enforce that BOTH Gemini Code Assist AND a human Code Owner's
+# /codex review are matched to the current HEAD SHA before any APPROVE
+# can merge. Closes the "reviewer-self-rationalizes-CI-green-means-
+# reviewed" gap that bit us when stale Gemini reviews were treated as
+# fresh.
+#
+# What it does:
+#   1. Trigger on PR events (opened, synchronize, reopened) AND on PR
+#      review events (submitted).
+#   2. Query GitHub API for:
+#      - Latest gemini-code-assist[bot] review (any state).
+#      - Latest comment containing the structured codex marker.
+#   3. Verify both reference the current HEAD SHA.
+#   4. Fail with actionable guidance if either tool is missing or stale.
+#
+# Required status check name: "verify-review-freshness"
+# Add to main branch protection alongside existing required checks.
+
+name: verify-review-freshness
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  pull_request_review:
+    types: [submitted, edited]
+
+# Minimal perms for API queries only
+permissions:
+  pull-requests: read
+  contents: read
+
+jobs:
+  check-review-freshness:
+    runs-on: ubuntu-latest
+    # Skip on draft PRs (noise)
+    if: github.event.pull_request.draft == false
+    steps:
+      - name: Verify Gemini + /codex both reviewed current HEAD
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr_num = context.payload.pull_request?.number
+              || context.payload.number;
+            if (!pr_num) {
+              core.setFailed('Could not determine PR number');
+              return;
+            }
+
+            const pr = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr_num,
+            });
+            const head_sha = pr.data.head.sha;
+            core.info(`PR #${pr_num} HEAD: ${head_sha}`);
+
+            // Fetch all reviews + issue comments
+            const reviews = await github.rest.pulls.listReviews({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr_num,
+              per_page: 100,
+            });
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr_num,
+              per_page: 100,
+            });
+
+            // Find latest Gemini review (any state)
+            const gemini_reviews = reviews.data.filter(r =>
+              r.user && (
+                r.user.login === 'gemini-code-assist[bot]' ||
+                r.user.login === 'gemini-code-assist'
+              )
+            );
+            const gemini_latest = gemini_reviews.sort(
+              (a, b) => new Date(b.submitted_at) - new Date(a.submitted_at)
+            )[0];
+
+            // /codex is a LOCAL subagent invoked by the Code Owner via
+            // Claude Code, NOT a GitHub bot. There is no codex-review[bot]
+            // account. The CO posts the /codex output as a comment
+            // themselves, including a structured marker:
+            //
+            //   <!-- codex-review: <40-char-head-sha> -->
+            //
+            // CI extracts the SHA via regex and verifies exact match
+            // against current HEAD. Marker omitted or stale = fail.
+            const CODEX_MARKER_RE = /<!-- codex-review: ([a-f0-9]{40}) -->/i;
+            let codex_head_match = null;
+            let codex_latest_stale = null;
+            for (const c of comments.data) {
+              const m = (c.body || '').match(CODEX_MARKER_RE);
+              if (!m) continue;
+              const sha = m[1].toLowerCase();
+              if (sha === head_sha.toLowerCase()) {
+                codex_head_match = c;
+                break;  // any HEAD-marker is sufficient
+              } else {
+                // Track latest stale for better error msg
+                const cur = codex_latest_stale &&
+                  codex_latest_stale.comment.created_at;
+                if (!cur ||
+                    new Date(c.created_at) > new Date(cur)) {
+                  codex_latest_stale = { comment: c, sha };
+                }
+              }
+            }
+
+            const failures = [];
+
+            if (!gemini_latest) {
+              failures.push(
+                'No Gemini review found on this PR. ' +
+                'Post `/gemini review` as a comment.'
+              );
+            } else if (gemini_latest.commit_id !== head_sha) {
+              const gem_short = gemini_latest.commit_id.slice(0, 7);
+              const head_short = head_sha.slice(0, 7);
+              failures.push(
+                `Gemini's latest review (${gem_short}) ` +
+                `does not match HEAD (${head_short}). ` +
+                `Post \`/gemini review\` to re-trigger.`
+              );
+            }
+
+            if (!codex_head_match) {
+              const head_short = head_sha.slice(0, 7);
+              const marker = `<!-- codex-review: ${head_sha} -->`;
+              if (codex_latest_stale) {
+                const stale_short = codex_latest_stale.sha.slice(0, 7);
+                failures.push(
+                  `/codex review marker found on older SHA ` +
+                  `(${stale_short}), not current HEAD ` +
+                  `(${head_short}). Code Owner must re-run ` +
+                  `\`/codex\` on current HEAD and post output ` +
+                  `comment with marker \`${marker}\`.`
+                );
+              } else {
+                failures.push(
+                  'No `/codex` review marker found on this PR. ' +
+                  'Code Owner must run `/codex` and post the ' +
+                  'output as a PR comment including the marker ' +
+                  `\`${marker}\`.`
+                );
+              }
+            }
+
+            if (failures.length > 0) {
+              const tail =
+                '\n\nBoth Gemini AND /codex must have reviewed ' +
+                'the current HEAD SHA before any Code Owner ' +
+                'APPROVE merges.';
+              const msg = '❌ Review freshness check failed:\n\n' +
+                failures.map(f => `- ${f}`).join('\n') +
+                tail;
+              core.setFailed(msg);
+            } else {
+              const head_short = head_sha.slice(0, 7);
+              core.info(
+                `✅ Gemini + /codex both reviewed HEAD ` +
+                `${head_short}. APPROVE-eligible.`
+              );
+            }
