@@ -288,11 +288,10 @@ def cmd_init(args: argparse.Namespace) -> None:
         else:
             # Clear stale rules so deletions in defaults/config propagate.
             # .claude/rules is generated output, not user-edited directly.
+            # shutil.rmtree handles subdirectories and non-empty dirs;
+            # listdir+os.remove only handled top-level files.
             if os.path.isdir(claude_rules):
-                for fname in os.listdir(claude_rules):
-                    fpath = os.path.join(claude_rules, fname)
-                    if os.path.isfile(fpath):
-                        os.remove(fpath)
+                shutil.rmtree(claude_rules)
             os.makedirs(claude_rules, exist_ok=True)
             # Copy defaults first
             copied = 0

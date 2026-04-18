@@ -156,10 +156,17 @@ while IFS= read -r ldap; do
   else
     echo "AUTO-RECOVER: Restarting ${ldap}..."
 
+    # Shell-escape substitutions before embedding in the
+    # command string (fed to `bash -c` inside start_session).
+    # ldap is validated alphanumeric, but defence in depth.
+    escaped_root=$(printf '%q' "${REPO_ROOT}")
+    escaped_prompt=$(printf '%q' "${startup_prompt}")
+    escaped_ldap=$(printf '%q' "${ldap}")
+
     start_session "${session_name}" \
-      "cd '${REPO_ROOT}' && claude \
---dangerously-skip-permissions '${startup_prompt}' \
-2>&1 | tee /tmp/agent-os-${ldap}-recovery.log; \
+      "cd ${escaped_root} && claude \
+--dangerously-skip-permissions ${escaped_prompt} \
+2>&1 | tee /tmp/agent-os-${escaped_ldap}-recovery.log; \
 echo 'Session ended. Press enter.'; read"
 
     echo "AUTO-RECOVER: ${ldap} restarted in ${SESSION_MGR} '${session_name}'"
