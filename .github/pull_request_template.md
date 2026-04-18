@@ -60,6 +60,8 @@ These happen AFTER the PR is open. Auto-merge waits on them.
 - [ ] Line-length within repo limits (Python/Shell/YAML: 80 chars)
 - [ ] If touching shell: `bash -n <file>` passes
 - [ ] If touching Python: `python3 -c 'import ast; ast.parse(...)'` passes
-- [ ] If touching config: `python3 -c "import yaml; yaml.safe_load(...)"` passes
+- [ ] If touching config:
+      `python3 -c "import yaml; yaml.safe_load(open('config/agent-os.yaml'))"`
+      passes
 - [ ] CI workflow checks (post-open): Privacy scan, Shellcheck,
       PR size, Unit tests, CodeQL Analyze (python + actions)
