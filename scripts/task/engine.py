@@ -292,7 +292,11 @@ def cmd_cancel(args: argparse.Namespace) -> None:
 
     task = tasks[task_id]
     status = task.get("status")
-    if status in ("COMPLETE", "CANCELLED"):
+    # EXPIRED is set by lease-expiry mechanism and represents
+    # historical fact (the task ran past its lease); --cancel
+    # must not overwrite that with a fresher cancelled_at and
+    # mask the actual coast event from the audit trail.
+    if status in ("COMPLETE", "CANCELLED", "EXPIRED"):
         print(
             f"Task {task_id} already {status}.",
             file=sys.stderr,

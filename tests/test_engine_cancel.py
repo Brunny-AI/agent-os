@@ -8,8 +8,10 @@ spuriously forever.
 
 from __future__ import annotations
 
+import datetime
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -53,8 +55,7 @@ class CancelTerminalStateTest(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = tempfile.mkdtemp()
         self.addCleanup(
-            __import__("shutil").rmtree,
-            self.tmp, True,
+            shutil.rmtree, self.tmp, ignore_errors=True
         )
         self.agent = "alice"
 
@@ -143,6 +144,45 @@ class CancelTerminalStateTest(unittest.TestCase):
         )
         self.assertNotEqual(r.returncode, 0)
         self.assertIn("not found", r.stderr)
+
+    def test_cancel_expired_rejects(self) -> None:
+        # EXPIRED is set by the lease-expiry mechanism and
+        # represents a real coast event in the audit trail.
+        # --cancel must NOT overwrite it (would mask history).
+        self._claim("T-EXP")
+        # Force lease expiry: backdate lease in state file,
+        # then run --check-lease so the engine flips status
+        # → EXPIRED through its own code path (not a hand
+        # edit pretending to be a lease).
+        path = _state_path(self.tmp, self.agent)
+        with open(path) as f:
+            state = json.load(f)
+        past = (
+            datetime.datetime.now(datetime.timezone.utc)
+            - datetime.timedelta(minutes=1)
+        ).isoformat()
+        state["tasks"]["T-EXP"]["lease_expires"] = past
+        with open(path, "w") as f:
+            json.dump(state, f)
+        _run(self.agent, self.tmp, "--check-lease")
+
+        # Now T-EXP is EXPIRED. --cancel must reject.
+        r = _run(
+            self.agent, self.tmp, "--cancel", "T-EXP",
+            "--cancel-reason", "stale",
+        )
+        self.assertNotEqual(
+            r.returncode, 0,
+            "--cancel must not overwrite EXPIRED state",
+        )
+        self.assertIn("EXPIRED", r.stderr)
+
+        # State unchanged: still EXPIRED, no cancelled_at.
+        with open(path) as f:
+            state = json.load(f)
+        task = state["tasks"]["T-EXP"]
+        self.assertEqual(task["status"], "EXPIRED")
+        self.assertNotIn("cancelled_at", task)
 
     def test_cancelled_shows_under_status(self) -> None:
         self._claim("T-S")
