@@ -9,12 +9,13 @@ v4.6 active-task gate breaks silently.
 
 from __future__ import annotations
 
+import datetime
 import json
 import os
 import subprocess
 import sys
+import typing
 import unittest
-from datetime import datetime, timedelta, timezone
 
 
 _REPO = os.path.abspath(
@@ -26,15 +27,35 @@ _GATE = os.path.join(
 
 
 def _now_iso(offset_min: float = 0.0) -> str:
-    """ISO8601 UTC anchored to wall clock + an offset."""
-    t = datetime.now(timezone.utc) + timedelta(
-        minutes=offset_min
-    )
+    """Return an ISO8601 UTC timestamp with an offset.
+
+    Args:
+        offset_min: Minutes to add to wall clock (negative for
+            past timestamps used in stale-artifact tests).
+
+    Returns:
+        ISO8601 string with UTC offset, e.g.
+        '2026-04-18T05:00:00+00:00'.
+    """
+    t = datetime.datetime.now(
+        datetime.timezone.utc
+    ) + datetime.timedelta(minutes=offset_min)
     return t.isoformat()
 
 
-def _run(state: dict, *args: str) -> tuple[str, str, int]:
-    """Pipe state JSON to poll_gates.py. Return (out, err, rc)."""
+def _run(
+    state: dict[str, typing.Any], *args: str,
+) -> tuple[str, str, int]:
+    """Pipe state JSON to poll_gates.py via stdin.
+
+    Args:
+        state: Engine state dict to feed into poll_gates.py
+            (matches the --json-status output schema).
+        *args: Extra CLI flags (e.g. '--max-age-min', '5').
+
+    Returns:
+        Tuple of (stdout, stderr, returncode), all stripped.
+    """
     result = subprocess.run(
         [sys.executable, _GATE, *args],
         input=json.dumps(state),
@@ -49,8 +70,15 @@ def _run(state: dict, *args: str) -> tuple[str, str, int]:
     )
 
 
-def _state(tasks: dict[str, dict]) -> dict:
-    return {"agent": "alice", "as_of": _now_iso(), "tasks": tasks}
+def _state(
+    tasks: dict[str, dict[str, typing.Any]],
+) -> dict[str, typing.Any]:
+    """Wrap a tasks dict in the json-status envelope."""
+    return {
+        "agent": "alice",
+        "as_of": _now_iso(),
+        "tasks": tasks,
+    }
 
 
 class PollGatesContractTest(unittest.TestCase):
