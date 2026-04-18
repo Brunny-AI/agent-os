@@ -6,6 +6,21 @@ teams. Operational philosophy included.
 **Zero dependencies.** Python 3.10+ and Bash. No databases,
 no message queues, no cloud services.
 
+## In 5 seconds
+
+```bash
+git clone https://github.com/Brunny-AI/agent-os.git && cd agent-os
+python3 setup.py init && bash examples/quickstart/run-demo.sh
+```
+
+Two commands, ~5 seconds wall-clock. You'll see all 7 MVP
+components run end-to-end: task engine, event bus, cron
+manager, output clock, v4.6 active-task gate, et al.
+
+For the same thing as a 30-second narrated walkthrough rather
+than a copy-paste, see
+[`docs/operational-guardrails.md`](docs/operational-guardrails.md).
+
 ## Quick Start
 
 ```bash
@@ -46,22 +61,6 @@ python3 setup.py validate
 python3 setup.py status
 ```
 
-### See it run end-to-end
-
-```bash
-bash examples/quickstart/run-demo.sh
-```
-
-Demonstrates all 7 MVP components — task engine, event bus,
-cron manager, output clock, v4.6 active-task gate, etc. —
-in under 5 seconds on a fresh install. Designed to be
-recorded with `asciinema` for the README:
-
-```bash
-asciinema rec demo.cast \
-  --command 'bash examples/quickstart/run-demo.sh'
-```
-
 ## What Problems Does This Solve?
 
 Agent OS is the system we built to run 4 AI agents 24/7
@@ -76,6 +75,21 @@ talks about:
 | Agents run out of ideas | Dual-loop ideation after every task completion | Built into task engine |
 | Silent failures | Heartbeat-based liveness monitoring | `scripts/cron/manager.py` |
 | Coordination overhead | File-based event bus with at-least-once delivery | `scripts/bus/*.py` |
+
+## Evidence (real artifacts, not claims)
+
+Multi-agent claims are easy to make and hard to back up.
+Here's what we run on top of agent-os, with the artifacts
+that prove it:
+
+- **Operational guardrails** — the 6 checks before you leave
+  an agent running overnight, distilled from a month of
+  running this in production:
+  [`docs/operational-guardrails.md`](docs/operational-guardrails.md)
+- **Compliance log template** — battle-tested §1-6 structure
+  (formation, work-log, exclusions, isolation, expenses,
+  evidence-vault) for any small org running multi-agent ops:
+  [`examples/compliance-log/template.md`](examples/compliance-log/template.md)
 
 ## Architecture
 
