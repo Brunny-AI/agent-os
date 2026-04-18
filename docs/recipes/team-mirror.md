@@ -119,12 +119,12 @@ enforce structurally:
   completing checkout; founder-level authorization
   beyond that is an operational convention, not a
   framework gate.
-- **Peer PRs pulled on each poll cycle.** Agent OS
-  polls don't yet ship a "scan PRs awaiting your
-  review" step in the default poll prompt — that
-  pattern is maintained per-team in
-  `workspaces/{agent}/` poll prompt overrides. A
-  generic version is on the v0.3 roadmap.
+- **Peer PRs pulled on each poll cycle.** A "scan PRs
+  awaiting your review" step isn't yet part of the
+  default poll prompt (`defaults/prompts/poll.md`).
+  Teams wanting it today add the step to their own
+  per-agent poll prompt after `setup.py init`. A
+  generic shipped version is on the v0.3 roadmap.
 - **Per-role poll prompts.** Coordinators and
   builders benefit from different gate ordering
   (compliance-first vs. task-first). Ships per-team
@@ -182,11 +182,13 @@ variations:
   is neutral about domain — domain lives in
   `profile.md`.
 
-Agent OS doesn't constrain role semantics. `builder`
-and `coordinator` are the role keys the framework
-references in `defaults/` today; domain-level
-specialization (reviewer, GTM, research) lives per-
-agent in `profile.md`.
+Agent OS doesn't constrain role semantics. `builder`,
+`coordinator`, and `reviewer` are the role keys the
+framework references in `defaults/agent-os.yaml` today
+(the first two for team membership, `reviewer` for
+workflow permissions). Domain-level specialization
+(GTM, research, product) lives per-agent in
+`profile.md`.
 
 ## Next steps
 
