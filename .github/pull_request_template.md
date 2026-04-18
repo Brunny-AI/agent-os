@@ -31,7 +31,7 @@ Replace [ ] with [x] and fill in artifact links.
 ## Auto-Merge (post-open)
 
 - [ ] Enabled auto-merge via
-      `gh pr merge $N --auto --squash --delete-branch`
+      `gh pr merge "${N}" --auto --squash --delete-branch`
       (fires automatically when Code Owner APPROVE + all
       required checks clear)
 
@@ -59,7 +59,10 @@ These happen AFTER the PR is open. Auto-merge waits on them.
 - [ ] `bash scripts/hooks/pre-push` passes (privacy)
 - [ ] Line-length within repo limits (Python/Shell/YAML: 80 chars)
 - [ ] If touching shell: `bash -n <file>` passes
-- [ ] If touching Python: `python3 -c 'import ast; ast.parse(...)'` passes
+- [ ] If touching Python:
+      `python3 -c "import ast; ast.parse(open('setup.py').read())"`
+      passes (matches pre-commit hook pattern; no `__pycache__/`
+      side effect from `py_compile`)
 - [ ] If touching config:
       `python3 -c "import yaml; yaml.safe_load(open('config/agent-os.yaml'))"`
       passes
