@@ -151,4 +151,4 @@ Every Sunday (or chosen cadence): export this log + any changed Drive docs as PD
 ---
 
 **Template version:** v1 (2026-04-17 extraction from Brunny AI live compliance log)
-**Feedback:** open an issue or PR against the `{entity-os-or-agent-os}` repo
+**Feedback:** open an issue or PR against the `agent-os` repo
