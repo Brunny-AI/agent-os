@@ -3,6 +3,7 @@
 [![CI](https://github.com/Brunny-AI/agent-os/actions/workflows/ci.yml/badge.svg)](https://github.com/Brunny-AI/agent-os/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python: 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](#requirements)
+[![Last commit](https://img.shields.io/github/last-commit/Brunny-AI/agent-os)](https://github.com/Brunny-AI/agent-os/commits/main)
 
 Configurable framework for running multi-agent Claude Code
 teams. Operational philosophy included.
