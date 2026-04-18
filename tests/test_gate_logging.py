@@ -184,6 +184,75 @@ class GateLoggingTest(unittest.TestCase):
         _run_gate(state, "--log-file", nested)
         self.assertTrue(pathlib.Path(nested).exists())
 
+    def test_log_failure_does_not_block_gate(self) -> None:
+        """Fail-open: unwritable log must not eat the token.
+
+        Regression for the original instrumentation code path
+        that crashed with an OSError before printing the gate
+        decision. The poll prompt's `case` statement reads
+        stdout; if main() raises before print(), behavior is
+        undefined.
+        """
+        ro_dir = os.path.join(self.tmp, "readonly")
+        os.makedirs(ro_dir)
+        os.chmod(ro_dir, 0o555)
+        self.addCleanup(os.chmod, ro_dir, 0o755)
+        unwritable = os.path.join(ro_dir, "audit.jsonl")
+        state = _state({
+            "T-1": {
+                "state": "IN_PROGRESS",
+                "artifacts": [
+                    {"path": "x.py", "timestamp": _now_iso(-2)}
+                ],
+            }
+        })
+        out, err, rc = _run_gate(
+            state, "--log-file", unwritable,
+        )
+        self.assertEqual(out, "OK")
+        self.assertEqual(rc, 0)
+        self.assertIn("audit log write failed", err)
+
+    def test_concurrent_appends_preserve_lines(self) -> None:
+        """flock + flush + fsync under the lock serializes
+        writes so each subprocess's line reaches disk before
+        another acquires the lock. No interleaved partial
+        lines; no lost writes.
+        """
+        state = _state({
+            "T-1": {
+                "state": "IN_PROGRESS",
+                "artifacts": [
+                    {"path": "x.py", "timestamp": _now_iso(-2)}
+                ],
+            }
+        })
+        procs = [
+            subprocess.Popen(
+                [sys.executable, _GATE,
+                 "--log-file", self.log],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            for _ in range(10)
+        ]
+        for proc in procs:
+            proc.communicate(input=json.dumps(state))
+        with open(self.log, encoding="utf-8") as handle:
+            lines = [
+                line for line in handle if line.strip()
+            ]
+        self.assertEqual(len(lines), 10)
+        for line in lines:
+            # No interleaved partial JSON:
+            self.assertTrue(line.strip().startswith("{"))
+            self.assertTrue(line.rstrip().endswith("}"))
+            # Each line parses cleanly:
+            entry = json.loads(line)
+            self.assertEqual(entry["token"], "OK")
+
 
 class GateAuditTest(unittest.TestCase):
     """gate_audit.py reads JSONL from the gate, emits summary."""

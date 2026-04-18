@@ -28,7 +28,7 @@ import datetime
 import json
 import pathlib
 import sys
-from typing import Any
+import typing
 
 
 def _parse_iso(ts: str) -> datetime.datetime | None:
@@ -42,8 +42,8 @@ def _parse_iso(ts: str) -> datetime.datetime | None:
 
 
 def _summarize(
-    entries: list[dict[str, Any]],
-) -> dict[str, Any]:
+    entries: list[dict[str, typing.Any]],
+) -> dict[str, typing.Any]:
     """Reduce filtered log entries to a summary dict.
 
     Args:
@@ -60,7 +60,7 @@ def _summarize(
     by_agent: dict[
         str, collections.Counter
     ] = collections.defaultdict(collections.Counter)
-    stale_events: list[dict[str, Any]] = []
+    stale_events: list[dict[str, typing.Any]] = []
     tss: list[str] = []
     for entry in entries:
         token = entry.get("token", "UNKNOWN")
@@ -88,7 +88,7 @@ def _summarize(
     }
 
 
-def _render_text(summary: dict[str, Any], days: int) -> str:
+def _render_text(summary: dict[str, typing.Any], days: int) -> str:
     """Render summary as human-readable text."""
     lines = [
         f"Gate audit — last {days} day(s)",
@@ -153,7 +153,8 @@ def main() -> None:
         - datetime.timedelta(days=args.days)
     )
 
-    entries: list[dict[str, Any]] = []
+    entries: list[dict[str, typing.Any]] = []
+    parse_failures = 0
     with path.open(encoding="utf-8") as handle:
         for raw_line in handle:
             line = raw_line.strip()
@@ -162,11 +163,23 @@ def main() -> None:
             try:
                 entry = json.loads(line)
             except json.JSONDecodeError:
+                parse_failures += 1
                 continue
             ts = _parse_iso(entry.get("ts", ""))
             if ts is None or ts < cutoff:
                 continue
             entries.append(entry)
+
+    if parse_failures:
+        # Docstring promises exit 1 on read/parse errors.
+        # Silent skipping caused undercounting; warn to
+        # stderr so the counts in summary remain trusted
+        # while the operator knows to investigate.
+        print(
+            f"warning: {parse_failures} malformed JSONL "
+            f"line(s) skipped",
+            file=sys.stderr,
+        )
 
     summary = _summarize(entries)
     if args.json:

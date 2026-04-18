@@ -32,6 +32,7 @@ import argparse
 import datetime
 import fcntl
 import json
+import os
 import pathlib
 import sys
 from typing import Any
@@ -250,6 +251,16 @@ def _append_log(
         fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
         try:
             handle.write(json.dumps(entry) + "\n")
+            # Flush Python buffer + sync to disk BEFORE
+            # releasing the lock. Without this, another
+            # process can acquire the lock, write, and exit
+            # while our bytes are still in the Python buffer
+            # — the final flush on file close then appends
+            # after their write, inverting order. flock
+            # serializes kernel writes only, not buffered
+            # writes.
+            handle.flush()
+            os.fsync(handle.fileno())
         finally:
             fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
 
@@ -302,16 +313,27 @@ def main() -> None:
         now,
     )
     if args.log_file:
-        _append_log(
-            args.log_file,
-            state.get("agent", "unknown"),
-            token,
-            detail,
-            context,
-            args.max_age_min,
-            args.blocked_grace_min,
-            now,
-        )
+        # Fail-open: audit log write failure must never
+        # block the gate decision. Callers shell-out to this
+        # script and read stdout for the token; if we raise
+        # before print(), the poll prompt's `case` statement
+        # sees empty input and behavior is undefined.
+        try:
+            _append_log(
+                args.log_file,
+                state.get("agent", "unknown"),
+                token,
+                detail,
+                context,
+                args.max_age_min,
+                args.blocked_grace_min,
+                now,
+            )
+        except OSError as exc:
+            print(
+                f"gate audit log write failed: {exc}",
+                file=sys.stderr,
+            )
     print(token)
     print(detail, file=sys.stderr)
     sys.exit(0 if token == "OK" else 1)
