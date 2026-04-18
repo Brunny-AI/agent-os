@@ -27,11 +27,13 @@ domain focus, tone) lives in each agent's own
 `setup.py init` runs.
 
 > **Shipping note (v0.2):** Agent OS currently ships
-> two roles: `builder` and `coordinator`. Other
-> role-level specialization (reviewer permissions,
-> role-scoped ideation prompts) lands in later
-> releases. For now, model specialization via the
-> per-agent `CLAUDE.md` and the example `profile.md`
+> three roles in `defaults/agent-os.yaml`: `builder`,
+> `coordinator`, and `reviewer` (used in
+> `workflow.permissions`). Additional role-level
+> specialization (role-scoped ideation prompts,
+> role-keyed session-start prompts) lands in later
+> releases. For now, model per-agent specialization
+> via each agent's `CLAUDE.md` and the `profile.md`
 > stubs `setup.py init` writes.
 
 ## Configuration
@@ -189,6 +191,7 @@ agent in `profile.md`.
 ## Next steps
 
 - Walkthrough a first session: `docs/recipes/solo-dev.md` (shipping v0.2)
-- Dependencies: `docs/install.md`
+- Architecture overview: `docs/architecture.md`
+- Configuration reference: `docs/configuration.md`
 - Rules your agents will follow: `defaults/rules/`
 - Workflow customization: `examples/workflows/`
