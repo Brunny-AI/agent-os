@@ -9,6 +9,7 @@ the next thing."
 
 Task states: READY -> CLAIMED -> IN_PROGRESS -> COMPLETE
              CLAIMED/IN_PROGRESS -> BLOCKED | EXPIRED
+             CLAIMED/IN_PROGRESS/BLOCKED -> CANCELLED
 
 A task cannot enter COMPLETE unless another task is CLAIMED by
 the same agent and at least one artifact exists for that task.
@@ -19,6 +20,7 @@ Usage:
     python scripts/task/engine.py --agent alice --status
     python scripts/task/engine.py --agent alice --check-lease
     python scripts/task/engine.py --agent alice --json-status
+    python scripts/task/engine.py --agent alice --cancel T-001
 """
 
 from __future__ import annotations
@@ -265,6 +267,47 @@ def cmd_block(args: argparse.Namespace) -> None:
     )
 
 
+def cmd_cancel(args: argparse.Namespace) -> None:
+    """Cancel a stale CLAIMED / IN_PROGRESS / BLOCKED task.
+
+    Cancellation is the graceful exit for tasks that can't
+    complete (spec changed, dependency vanished, task turned
+    out not to apply). Transitions status → CANCELLED,
+    records when and why, preserves the task's history in
+    the state file.
+
+    Unlike --complete, cancellation does NOT require a
+    follow-up claim — cancelling is always allowed because
+    the task isn't shipping anyway.
+
+    COMPLETE and CANCELLED tasks are both terminal; neither
+    triggers the finish-to-start invariant downstream.
+    """
+    state = _load_state(args.agent)
+    task_id = args.cancel
+    tasks = state.get("tasks")
+    if not isinstance(tasks, dict) or task_id not in tasks:
+        print(f"Task {task_id} not found.", file=sys.stderr)
+        sys.exit(1)
+
+    task = tasks[task_id]
+    status = task.get("status")
+    if status in ("COMPLETE", "CANCELLED"):
+        print(
+            f"Task {task_id} already {status}.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    task["status"] = "CANCELLED"
+    task["cancelled_at"] = _now_iso()
+    task["cancelled_reason"] = args.cancel_reason
+    _save_state(args.agent, state)
+    print(f"CANCELLED: {task_id}")
+    reason = args.cancel_reason or "(no reason given)"
+    print(f"  Reason: {reason}")
+
+
 def cmd_check_lease(args: argparse.Namespace) -> None:
     """Check for expired task leases."""
     state = _load_state(args.agent)
@@ -320,7 +363,7 @@ def cmd_status(args: argparse.Namespace) -> None:
 
     status_order = [
         "IN_PROGRESS", "CLAIMED", "COMPLETE",
-        "EXPIRED", "BLOCKED",
+        "EXPIRED", "BLOCKED", "CANCELLED",
     ]
     for status in status_order:
         group = [
@@ -493,6 +536,15 @@ def main() -> None:
         "--block", help="Mark task as blocked"
     )
     parser.add_argument(
+        "--cancel",
+        help="Cancel a stale task (CLAIMED/IN_PROGRESS/BLOCKED)"
+    )
+    parser.add_argument(
+        "--cancel-reason", default="",
+        dest="cancel_reason",
+        help="Why the task is being cancelled"
+    )
+    parser.add_argument(
         "--blocker-type", default="unknown",
         help="Blocker type"
     )
@@ -532,6 +584,8 @@ def main() -> None:
         cmd_artifact(args)
     elif args.block:
         cmd_block(args)
+    elif args.cancel:
+        cmd_cancel(args)
     elif args.check_lease:
         cmd_check_lease(args)
     elif args.post_ship:
