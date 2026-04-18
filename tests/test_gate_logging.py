@@ -214,10 +214,12 @@ class GateLoggingTest(unittest.TestCase):
         self.assertIn("audit log write failed", err)
 
     def test_concurrent_appends_preserve_lines(self) -> None:
-        """flock + flush + fsync under the lock serializes
-        writes so each subprocess's line reaches disk before
+        """flock + flush under the lock serializes writes so
+        each subprocess's line reaches the kernel before
         another acquires the lock. No interleaved partial
-        lines; no lost writes.
+        lines; no lost writes. (No fsync — JSONL line-
+        atomicity via single write under flock is sufficient
+        for an audit log without disk-durability needs.)
         """
         state = _state({
             "T-1": {
@@ -343,6 +345,67 @@ class GateAuditWindowTest(unittest.TestCase):
         self.assertEqual(proc.returncode, 0)
         self.assertIn("2 malformed JSONL", proc.stderr)
         self.assertIn("Total invocations: 1", proc.stdout)
+
+    def test_valid_json_non_dict_treated_as_corrupt(
+        self,
+    ) -> None:
+        """Schema-invalid-but-parseable lines (`[]`, scalars,
+        wrong-shape objects) must not AttributeError on the
+        .get() calls downstream. Regression for r4 codex
+        finding: only JSONDecodeError was caught; non-dict
+        JSON raised later.
+        """
+        with open(self.log, "w", encoding="utf-8") as handle:
+            handle.write(json.dumps({
+                "ts": _now_iso(), "agent": "alice",
+                "token": "OK",
+                "freshest_task": "T-1",
+                "freshest_age_min": 1.0,
+                "in_progress_count": 1,
+                "blocked_count": 0,
+            }) + "\n")
+            # Valid JSON, wrong shape:
+            handle.write("[]\n")
+            handle.write('"just a string"\n')
+            handle.write("42\n")
+        proc = subprocess.run(
+            [sys.executable,
+             os.path.join(_REPO, "scripts", "monitor",
+                          "gate_audit.py"),
+             "--log-file", self.log,
+             "--days", "1"],
+            capture_output=True, text=True, check=False,
+        )
+        self.assertEqual(proc.returncode, 0)
+        self.assertIn("3 malformed JSONL", proc.stderr)
+        self.assertIn("Total invocations: 1", proc.stdout)
+
+    def test_unreadable_log_exits_cleanly(self) -> None:
+        """File exists but is unreadable (chmod 000).
+        Regression for r4 codex finding: unguarded read
+        would traceback instead of clean exit per docstring.
+
+        Skipped when running as root (e.g., some CI images)
+        since chmod doesn't block root reads.
+        """
+        if os.geteuid() == 0:
+            self.skipTest("chmod gates do not apply to root")
+        with open(self.log, "w", encoding="utf-8") as handle:
+            handle.write("{}\n")
+        os.chmod(self.log, 0o000)
+        self.addCleanup(os.chmod, self.log, 0o644)
+        proc = subprocess.run(
+            [sys.executable,
+             os.path.join(_REPO, "scripts", "monitor",
+                          "gate_audit.py"),
+             "--log-file", self.log,
+             "--days", "1"],
+            capture_output=True, text=True, check=False,
+        )
+        # Must exit 1 with a stderr message, not traceback.
+        self.assertEqual(proc.returncode, 1)
+        self.assertNotIn("Traceback", proc.stderr)
+        self.assertIn("could not read", proc.stderr)
 
     def test_mixed_tz_suffix_window_bounds(self) -> None:
         """Entry with `+00:00` suffix should not be

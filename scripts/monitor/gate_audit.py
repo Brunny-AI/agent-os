@@ -18,8 +18,11 @@ Usage:
       --json  # machine-readable
 
 Exit: 0 on success even with corrupt lines (warned to
-stderr + skipped, counts remain trusted). 1 only if the
-log file itself cannot be opened.
+stderr + skipped, counts remain trusted — both syntax-
+invalid lines and valid-but-wrong-shape JSON are
+treated as corrupt). 1 only if the log file itself
+cannot be opened or read (missing, permission denied,
+I/O error).
 """
 
 from __future__ import annotations
@@ -170,7 +173,15 @@ def main() -> None:
 
     entries: list[dict[str, typing.Any]] = []
     parse_failures = 0
-    with path.open(encoding="utf-8") as handle:
+    try:
+        handle = path.open(encoding="utf-8")
+    except OSError as exc:
+        print(
+            f"could not read {args.log_file}: {exc}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    with handle:
         for raw_line in handle:
             line = raw_line.strip()
             if not line:
@@ -178,6 +189,13 @@ def main() -> None:
             try:
                 entry = json.loads(line)
             except json.JSONDecodeError:
+                parse_failures += 1
+                continue
+            # A valid-JSON line can still be the wrong shape:
+            # `[]`, `42`, `"x"` parse fine but don't carry our
+            # schema. Treat as corrupt so the .get() calls
+            # below can't AttributeError on non-dicts.
+            if not isinstance(entry, dict):
                 parse_failures += 1
                 continue
             ts = _parse_iso(entry.get("ts", ""))
