@@ -6,21 +6,6 @@ teams. Operational philosophy included.
 **Zero dependencies.** Python 3.10+ and Bash. No databases,
 no message queues, no cloud services.
 
-## In 5 seconds
-
-```bash
-git clone https://github.com/Brunny-AI/agent-os.git && cd agent-os
-python3 setup.py init && bash examples/quickstart/run-demo.sh
-```
-
-Two commands, ~5 seconds wall-clock. You'll see all 7 MVP
-components run end-to-end: task engine, event bus, cron
-manager, output clock, v4.6 active-task gate, et al.
-
-For the same thing as a 30-second narrated walkthrough rather
-than a copy-paste, see
-[`docs/operational-guardrails.md`](docs/operational-guardrails.md).
-
 ## Quick Start
 
 ```bash
@@ -61,6 +46,15 @@ python3 setup.py validate
 python3 setup.py status
 ```
 
+### See it run end-to-end (~5 seconds)
+
+```bash
+bash examples/quickstart/run-demo.sh
+```
+
+You'll see all 7 MVP components run end-to-end: task engine,
+event bus, cron manager, output clock, active-task gate, etc.
+
 ## What Problems Does This Solve?
 
 Agent OS is the system we built to run 4 AI agents 24/7
@@ -76,11 +70,10 @@ talks about:
 | Silent failures | Heartbeat-based liveness monitoring | `scripts/cron/manager.py` |
 | Coordination overhead | File-based event bus with at-least-once delivery | `scripts/bus/*.py` |
 
-## Evidence (real artifacts, not claims)
+## Operational docs we use ourselves
 
-Multi-agent claims are easy to make and hard to back up.
-Here's what we run on top of agent-os, with the artifacts
-that prove it:
+What we actually run on top of agent-os, with the artifacts
+to back the multi-agent claims (live run-evidence pending):
 
 - **Operational guardrails** — the 6 checks before you leave
   an agent running overnight, distilled from a month of
