@@ -1,9 +1,17 @@
 #!/usr/bin/env bash
-# Pre-commit hook: block direct commits to main.
+# Pre-commit hook: branch + style gates.
+#
+# Blocks commits with style issues that Gemini would flag,
+# using stdlib + bash only (per design-constraints.md).
+#
 # Install: cp scripts/hooks/pre-commit .git/hooks/pre-commit
+#
+# Bypass with --no-verify only if you know what you're doing
+# (the same checks run in CI, so bypass just defers the failure).
 
 set -euo pipefail
 
+# 1. Block direct commits to main
 branch="$(git symbolic-ref --short HEAD 2>/dev/null || true)"
 
 if [[ "${branch}" == "main" ]]; then
@@ -14,10 +22,86 @@ if [[ "${branch}" == "main" ]]; then
   exit 1
 fi
 
-# Validate branch naming: must match agent/description
+# 2. Validate branch naming: must match agent/description
 if [[ -n "${branch}" ]] \
   && ! echo "${branch}" \
     | grep -qE '^[a-z][-a-z0-9]*/[a-z][-a-z0-9]*$'; then
   echo "WARNING: Branch '${branch}' doesn't match" >&2
   echo "the {agent}/{description} convention." >&2
 fi
+
+# 3. Get list of staged files (Added/Copied/Modified, not Deleted)
+staged_files=$(git diff --cached --name-only \
+  --diff-filter=ACM 2>/dev/null || true)
+
+if [[ -z "${staged_files}" ]]; then
+  exit 0
+fi
+
+fail=0
+
+# 4. 80-char line length check on .py / .sh / .yaml
+#    (skip .md — long URLs are common; skip .json — often
+#    single-line generated)
+while IFS= read -r file; do
+  [[ -z "${file}" ]] && continue
+  case "${file}" in
+    *.py|*.sh|*.yaml|*.yml)
+      [[ -f "${file}" ]] || continue
+      violations=$(awk -v f="${file}" \
+        'length>80 {print f":"NR": "length" chars"}' \
+        "${file}")
+      if [[ -n "${violations}" ]]; then
+        echo "ERROR: lines exceed 80 chars:" >&2
+        echo "${violations}" >&2
+        fail=1
+      fi
+      ;;
+  esac
+done <<< "${staged_files}"
+
+# 5. Trailing whitespace + conflict marker check
+#    git diff --check handles both natively.
+if ! git diff --cached --check >&2; then
+  echo "ERROR: trailing whitespace or conflict markers" >&2
+  echo "found in staged changes (see above)." >&2
+  fail=1
+fi
+
+# 6. Python syntax check on staged .py files
+while IFS= read -r file; do
+  [[ -z "${file}" ]] && continue
+  case "${file}" in
+    *.py)
+      [[ -f "${file}" ]] || continue
+      if ! python3 -m py_compile "${file}" 2>&1; then
+        echo "ERROR: Python syntax error in ${file}" >&2
+        fail=1
+      fi
+      ;;
+  esac
+done <<< "${staged_files}"
+
+# 7. Bash syntax check on staged .sh files
+while IFS= read -r file; do
+  [[ -z "${file}" ]] && continue
+  case "${file}" in
+    *.sh)
+      [[ -f "${file}" ]] || continue
+      if ! bash -n "${file}" 2>&1; then
+        echo "ERROR: Bash syntax error in ${file}" >&2
+        fail=1
+      fi
+      ;;
+  esac
+done <<< "${staged_files}"
+
+if [[ "${fail}" -eq 1 ]]; then
+  echo "" >&2
+  echo "Fix issues above before committing. Bypass with" >&2
+  echo "  git commit --no-verify" >&2
+  echo "(but CI runs the same checks; bypass just defers)" >&2
+  exit 1
+fi
+
+exit 0
