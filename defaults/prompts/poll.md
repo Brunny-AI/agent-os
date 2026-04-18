@@ -26,6 +26,34 @@ Working dir: {root}.
    python3 scripts/task/engine.py --agent {agent} --status
    If expired: claim a new task immediately.
 
+3a. Active-task + parallel-work gate (HARD BLOCK on heartbeat).
+    gate="$(python3 scripts/task/engine.py --agent {agent} \
+      --json-status \
+      | python3 scripts/cron/poll_gates.py \
+      --max-age-min 15 --blocked-grace-min 15)"
+    case "$gate" in
+      OK) ;;  # Active task with artifact <15min — proceed
+      ACTIVE-TASK-REQUIRED|STALE-ARTIFACT)
+        # Heartbeat is BLOCKED. Claim + produce an artifact:
+        # 1. Pick a task (assigned to you, or unassigned).
+        # 2. python3 scripts/task/engine.py --agent {agent} \
+        #      --claim TASK_ID
+        # 3. Write a real file (code, spec, doc — anything
+        #    concrete; touching files to game the gate
+        #    defeats the point).
+        # 4. python3 scripts/task/engine.py --agent {agent} \
+        #      --artifact TASK_ID path/to/file
+        # 5. Re-run this gate; only proceed when OK.
+        ;;
+      PARALLEL-TASK-REQUIRED)
+        # Solo IN_PROGRESS + a blocked task >15min old.
+        # Pull a SECOND independent task in an orthogonal
+        # lane and produce its first artifact, then proceed.
+        # Blocked-on-upstream is real, but the agent doesn't
+        # have to be idle during it.
+        ;;
+    esac
+
 4. Heartbeat:
    python3 scripts/cron/manager.py heartbeat {agent} poll
 
