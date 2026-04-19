@@ -17,6 +17,8 @@ fresh clone before you've installed anything.
 git clone https://github.com/Brunny-AI/agent-os.git
 cd agent-os
 python3 setup.py init
+bash examples/quickstart/run-demo.sh  # ~5s end-to-end smoke, 7 MVP components
+python3 setup.py validate             # confirms setup is green
 ```
 
 That's it. You now have a working 3-agent team:
